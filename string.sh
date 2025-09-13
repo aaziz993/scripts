@@ -137,11 +137,10 @@ function substitute_string() {
   local getter="${1:-bash_env}"
   local evaluator="${2:-bash_c}"
   local source
+  source="$(src "${3:-}")"
   local output=""
   local index=0
   local -A cache=()
-
-  source="$(src "${3:-}")"
 
   function skip_evaluator() {
     printf "%s" "$1"
@@ -304,11 +303,10 @@ function substitute_string() {
 function evaluate_string() {
   local evaluator="${1:-bash_c}"
   local source
+  source="$(src "${2:-}")"
   local output=""
   local index=0
   depth=0
-
-  source="$(src "${2:-}")"
 
   while ((index < ${#source})); do
     local groups=()

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/ansi.sh"
+
 # Get source from pipe, terminal or file
 function src() {
   local source="${1:-}"
@@ -58,7 +60,7 @@ function user_input() {
   local input_color="${3:-}"
   local input
 
-  printf "\033[0;32m%s:\033[0m \033[1;36m" "$label" >&2
+  printf "$label_color%s: $input_color" "$label" >&2
   read -r input
   printf "\033[0m" >&2
 
