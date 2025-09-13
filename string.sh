@@ -11,6 +11,7 @@
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/env.sh"
 
 ID_PATTERN='[_\p{L}][_\p{L}\p{N}]*'
+KEY_PATTERN='[_\p{L}\p{N}][_\p{L}\p{N}-]*'
 SINGLE_QUOTED_STRING_PATTERN="'(?:[^'\\\\]|\\.)*'"
 DOUBLE_QUOTED_STRING_PATTERN='"(?:[^"\\\\]|\\.)*"'
 
@@ -95,8 +96,8 @@ function match_at() {
 }
 
 EVEN_DOLLARS_PATTERN='(?:\$\$)+'
-INTERPOLATE_PATTERN='\$('"$ID_PATTERN"'|\d+)'
-KEY_PATTERN='\s*('"$ID_PATTERN"'|\d+|'"$DOUBLE_QUOTED_STRING_PATTERN"')\s*'
+INTERPOLATE_PATTERN='\$('"$KEY_PATTERN"')'
+KEY_OR_STRING_PATTERN='\s*('"$KEY_PATTERN"'|'"$DOUBLE_QUOTED_STRING_PATTERN"')\s*'
 INTERPOLATE_START_PATTERN='\$\{'
 EVALUATE_START_PATTERN='\$\<'
 SUBSTITUTE_OTHER_PATTERN='[^$]+'
@@ -214,7 +215,7 @@ function substitute_string() {
 
           while IFS= read -r item; do
             groups+=("$(jq -r '@base64d' <<<"$item")")
-          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$KEY_PATTERN" "$index" "$source")")
+          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$KEY_OR_STRING_PATTERN" "$index" "$source")")
 
           ((${#groups[@]} == 0)) && break
 
@@ -228,7 +229,7 @@ function substitute_string() {
         done
 
         check '(( ${#path_keys[@]} == 0 ))' "Empty interpolation"
-        check '[[ "${source:index:1}" != "}" ]]' "Missing closing brace at: $index"
+        check '[[ "${source:index:1}" != "}" ]]' "Missing closing brace at '$index' ${source:index}"
 
         ((index += 1))
 

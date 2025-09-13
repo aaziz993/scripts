@@ -51,3 +51,16 @@ function download_absent_file() {
     echo "$file already exists, skipping download."
   fi
 }
+
+function user_input() {
+  local label="$1"
+  local label_color="${2:-}"
+  local input_color="${3:-}"
+  local input
+
+  printf "\033[0;32m%s:\033[0m \033[1;36m" "$label" >&2
+  read -r input
+  printf "\033[0m" >&2
+
+  printf "%s" "$input"
+}

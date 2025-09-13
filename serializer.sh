@@ -356,7 +356,7 @@ function decode_file() {
       indent="$(printf '    %.0s' $(seq 1 "$depth"))"
     fi
 
-    ansi_span "\033[0;32m" "File:" " $file\n" >&2
+    ansi_span "\033[0;32mFile:" " $file\n" >&2
 
     decoded_file="$("$decoder" "$file")"
 
@@ -367,7 +367,7 @@ function decode_file() {
 
       if [[ -v merged_files[$import_file] ]]; then
         if [[ -n "${merged_files[$import_file]}" ]]; then
-          ansi_span "\033[0;33m" "File:" " $import_file ↻\n" >&2
+          ansi_span "\033[0;33mFile:" " $import_file ↻\n" >&2
           merged_import_files+=("${merged_files[$import_file]}")
         else
           error "Detected cycle '$file' -> '$import_file'"
