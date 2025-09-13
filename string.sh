@@ -210,7 +210,6 @@ function substitute_string() {
         ((index += ${#groups[0]}))
 
         local -a path_keys=()
-        local path_string
 
         while true; do
           groups=()
@@ -235,6 +234,7 @@ function substitute_string() {
 
         ((index += 1))
 
+        local path_string
         path_string="$(join_to_string path_keys ".")"
 
         if [[ -v "${cache[$path_string]}" ]]; then

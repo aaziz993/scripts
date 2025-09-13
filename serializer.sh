@@ -400,7 +400,7 @@ test: 90
 values:
   testing: Testing
   greet: Hello
-  nested: ${values.greet1}, World!
+  nested: ${values.greet}, World!
   j: ${values.some}
   some:
     structure: vAL
