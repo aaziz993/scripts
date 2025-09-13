@@ -189,6 +189,7 @@ function substitute() {
   local global_source
   global_source="$(src "${2:-}")"
   local global_values="${1:-$global_source}"
+  local -A global_cache=()
 
   function inner_getter() {
     local -n keys="$1"
@@ -200,7 +201,7 @@ function substitute() {
       echo "${keys[*]}"
     )"
 
-    contains "$path" "$global_values" || error "Unresolved path '$path'" 2
+    contains "$path" "$global_values" || error "Unresolved '$path'" 2
 
     value="$(get "$path" "$global_values")"
 
@@ -219,9 +220,8 @@ function substitute() {
 
     bash -c "
         $(declare -f)
-        $(declare -p EVEN_DOLLARS_PATTERN INTERPOLATE_PATTERN KEY_PATTERN INTERPOLATE_START_PATTERN \
-          EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN \
-          interpolate deep_interpolate evaluate unescape_dollars global_source global_values)
+        $(declare -p EVEN_DOLLARS_PATTERN INTERPOLATE_PATTERN KEY_PATTERN INTERPOLATE_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
+        $(declare -p interpolate deep_interpolate evaluate unescape_dollars global_source global_values global_cache)
         function var() {
           inner_substitute_string \"\$1\" \"\$global_source\"
         }
@@ -234,14 +234,20 @@ function substitute() {
     local path="$1"
     local source="$2"
     local value
-    value="$(get "$path" "$source")"
 
-    if is_str <<<"$value"; then
-      substitute_string -i "$interpolate" -ib "$interpolate_braced" -di "$deep_interpolate" \
-        -e "$evaluate" -ud "$unescape_dollars" inner_getter inner_evaluator <<<"$value"
+    if [[ -v "${global_cache[$path]}" ]]; then
+      value="${global_cache[$path]}"
     else
-      printf "%s" "$value"
+      value="$(get "$path" "$source")"
+
+      if is_str <<<"$value"; then
+        value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -di "$deep_interpolate" \
+          -e "$evaluate" -ud "$unescape_dollars" inner_getter inner_evaluator <<<"$value")"
+        global_cache[$path]="$value"
+      fi
     fi
+
+    printf "%s" "$value"
   }
 
   function inner_substitute() {
@@ -389,16 +395,17 @@ function decode_file() {
 
 example=$(
   cat <<'EOF'
+func: ${values.str}
 test: 90
 values:
   testing: Testing
   greet: Hello
-  nested: ${values.greet}, World!
+  nested: ${values.greet1}, World!
   j: ${values.some}
   some:
     structure: vAL
   str: >
-    Something ${values.nested} $<echo $((98+546))> $<var values.testing> Other
+    Something ${values.nested} $<echo $((98+546))> $<var values.nested> Other
 EOF
 )
 

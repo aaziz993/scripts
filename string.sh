@@ -143,9 +143,9 @@ function substitute_string() {
   local source
   local output=""
   local index=0
+  local -A cache=()
 
   source="$(src "${3:-}")"
-  local rand=$RANDOM
 
   function skip_evaluator() {
     printf "%s" "$1"
@@ -179,18 +179,25 @@ function substitute_string() {
         ((index += ${#groups[0]}))
 
         local key="${groups[1]}"
-        local -a path_keys=("$key")
+        local value
 
-        value="$("$getter" path_keys)"
+        if [[ -v "${cache[$key]}" ]]; then
+          value="${cache[$key]}"
+        else
+          local -a path_keys=("$key")
 
-        local status=$?
-        ((status == 2)) && error "Interpolate '$key'" "$status"
+          value="$("$getter" path_keys)"
 
-        if [[ $status == 0 && "$deep_interpolate" == true ]]; then
-          value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -di "$deep_interpolate" \
-            -e "$evaluate" -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
+          local status=$?
+          ((status == 2)) && error "Unresolved '$key'" "$status"
+
+          if [[ $status == 0 && "$deep_interpolate" == true ]]; then
+            value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -di "$deep_interpolate" \
+              -e "$evaluate" -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
+          fi
+
+          cache[$key]="$value"
         fi
-
         output+="$value"
       fi
     fi
@@ -203,6 +210,7 @@ function substitute_string() {
         ((index += ${#groups[0]}))
 
         local -a path_keys=()
+        local path_string
 
         while true; do
           groups=()
@@ -227,14 +235,23 @@ function substitute_string() {
 
         ((index += 1))
 
-        value="$("$getter" path_keys)"
+        path_string="$(join_to_string path_keys ".")"
 
-        local status=$?
-        ((status == 2)) && error "Interpolate '$(join_to_string path_keys ".")'" "$status"
+        if [[ -v "${cache[$path_string]}" ]]; then
+          value="${cache[$path_string]}"
+        else
 
-        if [[ $status == 0 && "$deep_interpolate" == true ]]; then
-          value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -di "$deep_interpolate" \
-            -e "$evaluate" -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
+          value="$("$getter" path_keys)"
+
+          local status=$?
+          ((status == 2)) && error "Unresolved '$path_string'" "$status"
+
+          if [[ $status == 0 && "$deep_interpolate" == true ]]; then
+            value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -di "$deep_interpolate" \
+              -e "$evaluate" -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
+
+            cache[$path_string]="$value"
+          fi
         fi
 
         output+="$value"
