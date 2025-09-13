@@ -80,6 +80,7 @@ function match_at() {
     
     my ($input, $regex) = @ARGV;
 
+
     if( $input =~ qr/^$regex/ ) {
       my @groups = map { defined $_ ? $_ : "" } @{^CAPTURE};
       print encode_json({
@@ -186,6 +187,8 @@ function substitute_string() {
           ((status > 1)) && error "Unresolved '$key'" "$status"
 
           if ((status == 0)); then
+            groups=()
+
             value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
               -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
 
@@ -201,7 +204,7 @@ function substitute_string() {
         groups+=("$(jq -r '@base64d' <<<"$item")")
       done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" "$index" "$source")")
       if ((${#groups[@]} > 0)); then
-        echo "$index:${#source}:${source:index}:${groups[0]}">&2
+
         ((index += ${#groups[0]}))
 
         local -a path_keys=()
@@ -241,6 +244,8 @@ function substitute_string() {
           ((status > 1)) && error "Unresolved '$plain_path'" "$status"
 
           if ((status == 0)); then
+            groups=()
+
             value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
               -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
 
