@@ -337,7 +337,7 @@ function decode_file() {
 
     merged_imports="$(merge decoded_imports "*n")"
 
-    decoded_file="$(substitute -ed false -eb false "" "$decoded_file" | substitute "$merged_imports")"
+    decoded_file="$(substitute -ud false "" "$decoded_file" | substitute "$merged_imports")"
 
     assign "" "*=" "$decoded_file" "$merged_imports"
   }
@@ -356,7 +356,7 @@ function decode_file() {
       indent="$(printf '    %.0s' $(seq 1 "$depth"))"
     fi
 
-    ansi_span "\033[0;32m" "$file\n" >&2
+    ansi_span "\033[0;32m" "File:" " $file\n" >&2
 
     decoded_file="$("$decoder" "$file")"
 

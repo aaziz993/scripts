@@ -2,11 +2,10 @@
 
 function ansi_span() {
   local color="$1"
+  local first="$2"
   shift
-  local first="$1"
   shift
   # Color first argument, then append rest uncolored
-  printf "%b%s" "$color" "$first"
-  printf "\033[0m"
+  printf "%b%b\033[0m" "$color" "$first"
   printf "%b" "$@"
 }
