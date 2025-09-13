@@ -94,13 +94,13 @@ function match_at() {
   ' -- "${source:$index}" "$regex"
 }
 
-_EVEN_DOLLARS_PATTERN='(?:\$\$)+'
-_INTERPOLATE_PATTERN='\$('"$ID_PATTERN"'|\d+)'
-_KEY_PATTERN='\s*('"$ID_PATTERN"'|\d+|'"$DOUBLE_QUOTED_STRING_PATTERN"')\s*'
-_INTERPOLATE_START_PATTERN='\$\{'
-_EVALUATE_START_PATTERN='\$\<'
-_SUBSTITUTE_OTHER_PATTERN='[^$]+'
-_EVALUATE_OTHER_PATTERN='[^"<>]+'
+EVEN_DOLLARS_PATTERN='(?:\$\$)+'
+INTERPOLATE_PATTERN='\$('"$ID_PATTERN"'|\d+)'
+KEY_PATTERN='\s*('"$ID_PATTERN"'|\d+|'"$DOUBLE_QUOTED_STRING_PATTERN"')\s*'
+INTERPOLATE_START_PATTERN='\$\{'
+EVALUATE_START_PATTERN='\$\<'
+SUBSTITUTE_OTHER_PATTERN='[^$]+'
+EVALUATE_OTHER_PATTERN='[^"<>]+'
 
 function substitute_string() {
   local interpolate=false
@@ -145,6 +145,7 @@ function substitute_string() {
   local index=0
 
   source="$(src "${3:-}")"
+  local rand=$RANDOM
 
   function skip_evaluator() {
     printf "%s" "$1"
@@ -156,7 +157,7 @@ function substitute_string() {
     if [[ "$interpolate" == true || "$interpolate_braced" == true || "$evaluate" == true ]]; then
       while IFS= read -r item; do
         groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$_EVEN_DOLLARS_PATTERN" "$index" "$source")")
+      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVEN_DOLLARS_PATTERN" "$index" "$source")")
       if ((${#groups[@]} > 0)); then
         ((index += ${#groups[0]}))
 
@@ -173,7 +174,7 @@ function substitute_string() {
     if [[ "$interpolate" == true ]]; then
       while IFS= read -r item; do
         groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$_INTERPOLATE_PATTERN" "$index" "$source")")
+      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_PATTERN" "$index" "$source")")
       if ((${#groups[@]} > 0)); then
         ((index += ${#groups[0]}))
 
@@ -197,7 +198,7 @@ function substitute_string() {
     if [[ "$interpolate_braced" == true ]]; then
       while IFS= read -r item; do
         groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$_INTERPOLATE_START_PATTERN" "$index" "$source")")
+      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" "$index" "$source")")
       if ((${#groups[@]} > 0)); then
         ((index += ${#groups[0]}))
 
@@ -208,7 +209,7 @@ function substitute_string() {
 
           while IFS= read -r item; do
             groups+=("$(jq -r '@base64d' <<<"$item")")
-          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$_KEY_PATTERN" "$index" "$source")")
+          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$KEY_PATTERN" "$index" "$source")")
 
           ((${#groups[@]} == 0)) && break
 
@@ -245,7 +246,7 @@ function substitute_string() {
     if [[ "$evaluate" == true ]]; then
       while IFS= read -r item; do
         groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$_EVALUATE_START_PATTERN" "$index" "$source")")
+      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_START_PATTERN" "$index" "$source")")
       if ((${#groups[@]} > 0)); then
         ((index += ${#groups[0]}))
 
@@ -267,7 +268,7 @@ function substitute_string() {
 
     while IFS= read -r item; do
       groups+=("$(jq -r '@base64d' <<<"$item")")
-    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$_SUBSTITUTE_OTHER_PATTERN" "$index" "$source")")
+    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$SUBSTITUTE_OTHER_PATTERN" "$index" "$source")")
     if ((${#groups[@]} > 0)); then
       ((index += ${#groups[0]}))
 
@@ -348,7 +349,7 @@ function evaluate_string() {
 
     while IFS= read -r item; do
       groups+=("$(jq -r '@base64d' <<<"$item")")
-    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$_EVALUATE_OTHER_PATTERN" "$index" "$source")")
+    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_OTHER_PATTERN" "$index" "$source")")
     if ((${#groups[@]} > 0)); then
       ((index += ${#groups[0]}))
 

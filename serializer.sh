@@ -217,21 +217,17 @@ function substitute() {
   function inner_evaluator() {
     local value="$1"
 
-    local result
-
-    result="$(bash -c "
+    bash -c "
         $(declare -f)
-        $(declare -p interpolate deep_interpolate evaluate unescape_dollars global_source global_values)
+        $(declare -p EVEN_DOLLARS_PATTERN INTERPOLATE_PATTERN KEY_PATTERN INTERPOLATE_START_PATTERN \
+          EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN \
+          interpolate deep_interpolate evaluate unescape_dollars global_source global_values)
         function var() {
           inner_substitute_string \"\$1\" \"\$global_source\"
         }
         set -e
         $value
-    ")"
-
-    local status=$?
-
-    printf "%s" "$result"
+    "
   }
 
   function inner_substitute_string() {
