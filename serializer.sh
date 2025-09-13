@@ -400,7 +400,7 @@ values:
   some:
     structure: vAL
   str: >
-    Something ${values.nested} $<echo $((98+546))> $<var values.j> Other
+    Something ${values.nested} $<echo $((98+546))> $<var values.str2> Other
   str2: |
     Greetings $test
 EOF
