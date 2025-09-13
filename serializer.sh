@@ -153,7 +153,6 @@ function merge() {
 function substitute() {
   local interpolate=false
   local interpolate_braced=true
-  local deep_interpolate=true
   local evaluate=true
   local unescape_dollars=true
 
@@ -165,10 +164,6 @@ function substitute() {
       ;;
     -ib | --interpolate_braced)
       interpolate_braced="${2:-true}"
-      shift 2
-      ;;
-    -di | --deep-interpolate)
-      deep_interpolate="${2:-true}"
       shift 2
       ;;
     -e | --evaluate)
@@ -221,7 +216,7 @@ function substitute() {
     bash -c "
         $(declare -f)
         $(declare -p EVEN_DOLLARS_PATTERN INTERPOLATE_PATTERN KEY_PATTERN INTERPOLATE_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
-        $(declare -p interpolate deep_interpolate evaluate unescape_dollars global_source global_values global_cache)
+        $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache)
         function var() {
           inner_substitute_string \"\$1\" \"\$global_source\"
         }
@@ -241,8 +236,8 @@ function substitute() {
       value="$(get "$path" "$source")"
 
       if is_str <<<"$value"; then
-        value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -di "$deep_interpolate" \
-          -e "$evaluate" -ud "$unescape_dollars" inner_getter inner_evaluator <<<"$value")"
+        value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" -ud "$unescape_dollars" \
+          inner_getter inner_evaluator <<<"$value")"
         global_cache[$path]="$value"
       fi
     fi
@@ -405,7 +400,7 @@ values:
   some:
     structure: vAL
   str: >
-    Something ${values.nested} $<echo $((98+546))> $<var values.nested> Other
+    Something ${values.nested} $<echo $((98+546))> $<var values.j> Other
 EOF
 )
 
