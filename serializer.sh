@@ -86,7 +86,7 @@ function is_scalar() {
   return 1
 }
 
-function or() {
+function coalesce() {
   local default="$1"
   local source="${2:-}"
 
@@ -136,7 +136,14 @@ function replace() {
   src "$source" | yq -r=false ".$to_path $assignment .$from_path | del(.$from_path)"
 }
 
-function delete() {
+function delete_path() {
+  local path="$1"
+  local source="${2:-}"
+
+  src "$source" | yq -r=false "del(.$path)"
+}
+
+function delete_paths() {
   local -n paths="$1"
   local source="${2:-}"
 
@@ -292,7 +299,14 @@ function replace_in_file() {
   yq -i ".$to_path $assignment .$from_path | del(.$from_path)" "$source"
 }
 
-function delete_in_file() {
+function delete_path_in_file() {
+  local path="$1"
+  local source="$2"
+
+  yq -i "del(.$path)" "$source"
+}
+
+function delete_paths_in_file() {
   local -n paths="$1"
   local source="$2"
 
