@@ -208,7 +208,6 @@ function substitute_string() {
         groups+=("$(jq -r '@base64d' <<<"$item")")
       done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" "$index" "$source")")
       if ((${#groups[@]} > 0)); then
-
         ((index += ${#groups[0]}))
 
         local -a path_keys=()
@@ -236,7 +235,7 @@ function substitute_string() {
           fi
         done
 
-        check '(( ${#path_keys[@]} == 0 ))' "Empty interpolation"
+        check '(( ${#path_keys[@]} == 0 ))' "Empty interpolate"
         check '[[ "${source:index:1}" != "}" ]]' "Missing closing brace at '$index' ${source:index}"
 
         ((index += 1))
