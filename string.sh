@@ -374,7 +374,13 @@ function evaluate_string() {
       output+=">"
 
       if ((depth == 0)); then
-        "$evaluator" "$output"
+        local value
+        value="$("$evaluator" "$output")"
+
+        local status=$?
+        ((status != 0)) && error "Evaluate" $status
+
+        printf "%s" "$value"
         return
       fi
 
@@ -397,3 +403,31 @@ function evaluate_string() {
 
   error "Unbalanced evaluate '<>'"
 }
+
+function getter() {
+  local -n keys="$1"
+
+  return 2
+}
+
+function evaluator() {
+  local value="$1"
+  local getter="${2-getter}"
+
+  bash -c "
+  set -euo pipefail
+  $(declare -f)
+  $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
+  var() {
+    local -a path_keys=(\"\$1\")
+    getter path_keys
+    local status=\$?
+    if ((status != 0)); then
+        echo 'Getter failed' >&2
+        exit \$status
+    fi
+    }
+  $value"
+}
+
+substitute_string getter evaluator 'Some $<echo $(($(var test) + 1))>'

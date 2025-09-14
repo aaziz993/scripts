@@ -34,5 +34,5 @@ function bash_env() {
 function bash_c() {
   local value="$1"
 
-  bash -c "set -e; $value"
+  bash -c "set -euo pipefail; $value"
 }
