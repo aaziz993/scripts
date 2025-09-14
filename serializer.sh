@@ -196,7 +196,7 @@ function substitute() {
       echo "${keys[*]}"
     )"
 
-    contains "$path" "$global_values" || error "Unresolved '$path' in '$global_values'" 2
+    contains "$path" "$global_values" || error "Unresolved '$path' in \n$global_values" 2
 
     value="$(get "$path" "$global_values")"
 
