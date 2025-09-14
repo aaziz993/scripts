@@ -375,7 +375,7 @@ function decode_file() {
 
     for index in "${!import_files[@]}"; do
       import_file="${import_files[$index]}"
-      local is_last=$(( index == total - 1 ? 1 : 0 ))
+      local is_last=$((index == total - 1 ? 1 : 0))
       local connector="├──"
       [[ $is_last -eq 1 ]] && connector="└──"
 
@@ -389,7 +389,7 @@ function decode_file() {
       else
         ansi_span "$prefix$connector " "\033[0;32mFile:" " $import_file\n" >&2
 
-        local next_prefix
+        local next_prefix="$prefix"
         [[ $is_last -eq 1 ]] && next_prefix+="   " || next_prefix+="│  "
 
         decode_file_inner "$import_file" "$next_prefix"
