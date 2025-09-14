@@ -208,7 +208,7 @@ function substitute() {
     contains "$path" "$global_values" || return 2
 
     value="$(get "$path" "$global_values")"
-
+    echo -e "Path:$path -> Value[$(is_scalar<<<"$value" && echo true || false)]\n<<$value>>" >&2
     if is_scalar <<<"$value"; then
       printf "%s" "$value"
     else
@@ -224,7 +224,7 @@ function substitute() {
 
     bash -c "
         $(declare -f)
-        $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_PATTERN KEY_OR_STRING_PATTERN INTERPOLATE_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
+        $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_PATTERN INTERPOLATE_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
         $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache)
         function var() {
           inner_substitute_string \"\$1\" \"\$global_source\"

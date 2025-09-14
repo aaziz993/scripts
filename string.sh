@@ -96,8 +96,8 @@ function match_at() {
 }
 
 EVEN_DOLLARS_PATTERN='(?:\$\$)+'
-INTERPOLATE_PATTERN='\$('"$KEY_PATTERN"')'
-KEY_OR_STRING_PATTERN='\s*('"$KEY_PATTERN"'|'"$DOUBLE_QUOTED_STRING_PATTERN"')\s*'
+INTERPOLATE_KEY='\s*('"$KEY_PATTERN"'|'"$SINGLE_QUOTED_STRING_PATTERN"'|'"$DOUBLE_QUOTED_STRING_PATTERN"')\s*'
+INTERPOLATE_PATTERN='\$('"$INTERPOLATE_KEY"')'
 INTERPOLATE_START_PATTERN='\$\{'
 EVALUATE_START_PATTERN='\$\<'
 SUBSTITUTE_OTHER_PATTERN='[^$]+'
@@ -218,7 +218,7 @@ function substitute_string() {
 
           while IFS= read -r item; do
             groups+=("$(jq -r '@base64d' <<<"$item")")
-          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$KEY_OR_STRING_PATTERN" "$index" "$source")")
+          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" "$index" "$source")")
 
           ((${#groups[@]} == 0)) && break
 
