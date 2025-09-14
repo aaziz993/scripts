@@ -219,7 +219,7 @@ function substitute_string() {
             cache[$path_plain]="$value"
           elif ((status > 1)); then
             [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
-            value="${source:offset:index}"
+            value="${source:offset:index-offset}"
           fi
         fi
 
@@ -255,7 +255,7 @@ function substitute_string() {
         done
 
         if ((${#path_keys[@]} == 0)); then
-          ((index -= offset))
+          index=$offset
         else
           local path_plain
           path_plain="$(join_to_string path_keys ".")"
@@ -273,7 +273,7 @@ function substitute_string() {
               cache[$path_plain]="$value"
             elif ((status > 1)); then
               [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
-              value="${source:offset:index}"
+              value="${source:offset:index-offset}"
             fi
           fi
 
@@ -400,7 +400,7 @@ function evaluate_string() {
 
 function getter() {
   local -n keys="$1"
-
+return 2
   printf "%s" "$(join_to_string keys ".")"
 }
 
