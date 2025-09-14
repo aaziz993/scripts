@@ -223,14 +223,14 @@ function substitute() {
     local value="$1"
 
     bash -c "
-        $(declare -f)
-        $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
-        $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache)
-        function var() {
-          inner_substitute_string \"\$1\" \"\$global_source\"
-        }
-        set -e
-        $value
+      set -euo pipefail
+      $(declare -f)
+      $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
+      $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache)
+      function var() {
+        inner_substitute_string \"\$1\" \"\$global_source\"
+      }
+      $value
     "
   }
 
