@@ -397,11 +397,3 @@ function evaluate_string() {
 
   error "Unbalanced evaluate '<>'"
 }
-
-function getter() {
-  local -n keys="$1"
-return 2
-  printf "%s" "$(join_to_string keys ".")"
-}
-
-substitute_string -i true -s false getter "" "Some \${   test.    \"o\"   .'other'   } \$\"some\".opa.jet"
