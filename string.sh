@@ -99,8 +99,8 @@ function match_at() {
 
 EVEN_DOLLARS_PATTERN='(?:\$\$)+'
 INTERPOLATE_KEY='\s*(?|('"$KEY_PATTERN"')|'"'($SINGLE_QUOTED_STRING_PLAIN_PATTERN)'"'|"('"$DOUBLE_QUOTED_STRING_PLAIN_PATTERN"')")\s*'
-INTERPOLATE_PATTERN='\$('"$INTERPOLATE_KEY"')'
-INTERPOLATE_START_PATTERN='\$\{'
+INTERPOLATE_START_PATTERN='\$'
+INTERPOLATE_BRACED_START_PATTERN='\$\{'
 EVALUATE_START_PATTERN='\$\<'
 SUBSTITUTE_OTHER_PATTERN='[^$]+'
 EVALUATE_OTHER_PATTERN='[^"<>]+'
@@ -159,7 +159,7 @@ function substitute_string() {
     if [[ "$interpolate" == true || "$interpolate_braced" == true || "$evaluate" == true ]]; then
       while IFS= read -r item; do
         groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVEN_DOLLARS_PATTERN" "$index" "$source")")
+      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVEN_DOLLARS_PATTERN" $index "$source")")
       if ((${#groups[@]} > 0)); then
         ((index += ${#groups[0]}))
 
@@ -172,43 +172,10 @@ function substitute_string() {
       fi
     fi
 
-    if [[ "$interpolate" == true ]]; then
-      while IFS= read -r item; do
-        groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_PATTERN" "$index" "$source")")
-      if ((${#groups[@]} > 0)); then
-        ((index += ${#groups[0]}))
-
-        local key="${groups[1]}"
-        local value
-
-        if [[ -v "${cache[$key]}" ]]; then
-          value="${cache[$key]}"
-        else
-          local -a path_keys=("$key")
-
-          value="$("$getter" path_keys)"
-
-          local status=$?
-          if ((status == 0)); then
-            value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
-              -ud "$unescape_dollars" -s "$strict" "$getter" "$evaluator" <<<"$value")"
-            cache[$key]="$value"
-          elif ((status > 1)); then
-            [[ "$strict" == true ]] && error "Unresolved '$key'" "$status"
-            value="${groups[0]}"
-          fi
-        fi
-
-        output+="$value"
-        continue
-      fi
-    fi
-
     if [[ "$interpolate_braced" == true ]]; then
       while IFS= read -r item; do
         groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" "$index" "$source")")
+      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_BRACED_START_PATTERN" $index "$source")")
       if ((${#groups[@]} > 0)); then
         ((index += ${#groups[0]}))
 
@@ -217,10 +184,9 @@ function substitute_string() {
 
         while true; do
           groups=()
-
           while IFS= read -r item; do
             groups+=("$(jq -r '@base64d' <<<"$item")")
-          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" "$index" "$source")")
+          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $index "$source")")
 
           ((${#groups[@]} == 0)) && break
 
@@ -264,10 +230,64 @@ function substitute_string() {
       fi
     fi
 
+    if [[ "$interpolate" == true ]]; then
+      while IFS= read -r item; do
+        groups+=("$(jq -r '@base64d' <<<"$item")")
+      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" $index "$source")")
+      if ((${#groups[@]} > 0)); then
+        local -a path_keys=()
+        local interpolate_content=
+
+        local offset=${#groups[0]}
+
+        while true; do
+          groups=()
+          while IFS= read -r item; do
+            groups+=("$(jq -r '@base64d' <<<"$item")")
+          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $((index + offset)) "$source")")
+
+          ((${#groups[@]} == 0)) && break
+
+          ((offset += "${#groups[0]}"))
+
+          path_keys+=("${groups[1]}")
+
+          [[ "${source:index:1}" == "." ]] && ((offset += 1))
+        done
+
+        if ((${#path_keys[@]} > 0)); then
+          ((index += offset))
+
+          local path_plain
+          path_plain="$(join_to_string path_keys ".")"
+          local value
+
+          if [[ -v "${cache[$path_plain]}" ]]; then
+            value="${cache[$path_plain]}"
+          else
+            value="$("$getter" path_keys)"
+
+            local status=$?
+            if ((status == 0)); then
+              value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
+                -ud "$unescape_dollars" -s "$strict" "$getter" "$evaluator" <<<"$value")"
+              cache[$path_plain]="$value"
+            elif ((status > 1)); then
+              [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
+              value="${source:index-offset:index}"
+            fi
+          fi
+
+          output+="$value"
+          continue
+        fi
+      fi
+    fi
+
     if [[ "$evaluate" == true ]]; then
       while IFS= read -r item; do
         groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_START_PATTERN" "$index" "$source")")
+      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_START_PATTERN" $index "$source")")
       if ((${#groups[@]} > 0)); then
         ((index += ${#groups[0]}))
 
@@ -289,7 +309,7 @@ function substitute_string() {
 
     while IFS= read -r item; do
       groups+=("$(jq -r '@base64d' <<<"$item")")
-    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$SUBSTITUTE_OTHER_PATTERN" "$index" "$source")")
+    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$SUBSTITUTE_OTHER_PATTERN" $index "$source")")
     if ((${#groups[@]} > 0)); then
       ((index += ${#groups[0]}))
 
@@ -318,7 +338,7 @@ function evaluate_string() {
     # Single-quoted value
     while IFS= read -r item; do
       groups+=("$(jq -r '@base64d' <<<"$item")")
-    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$SINGLE_QUOTED_STRING_PATTERN" "$index" "$source")")
+    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$SINGLE_QUOTED_STRING_PATTERN" $index "$source")")
 
     if ((${#groups[@]} > 0)); then
       ((index += ${#groups[0]}))
@@ -330,7 +350,7 @@ function evaluate_string() {
     # Double-quoted value
     while IFS= read -r item; do
       groups+=("$(jq -r '@base64d' <<<"$item")")
-    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$DOUBLE_QUOTED_STRING_PATTERN" "$index" "$source")")
+    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$DOUBLE_QUOTED_STRING_PATTERN" $index "$source")")
     if ((${#groups[@]} > 0)); then
       ((index += ${#groups[0]}))
 
@@ -364,7 +384,7 @@ function evaluate_string() {
 
     while IFS= read -r item; do
       groups+=("$(jq -r '@base64d' <<<"$item")")
-    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_OTHER_PATTERN" "$index" "$source")")
+    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_OTHER_PATTERN" $index "$source")")
     if ((${#groups[@]} > 0)); then
       ((index += ${#groups[0]}))
 
@@ -378,3 +398,11 @@ function evaluate_string() {
 
   error "Unbalanced evaluate '<>'"
 }
+
+function getter() {
+  local -n keys="$1"
+return 2
+  printf "%s" "$(join_to_string keys ".")"
+}
+
+substitute_string -i true -s false getter "" "Some \${   test.    \"o\"   .'other'   } \$\"some\".opa.jet"
