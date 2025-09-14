@@ -284,6 +284,8 @@ function substitute_string() {
         groups+=("$(jq -r '@base64d' <<<"$item")")
       done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_START_PATTERN" $index "$source")")
       if ((${#groups[@]} > 0)); then
+        local offset=$index
+
         ((index += ${#groups[0]}))
 
         local script
@@ -294,7 +296,10 @@ function substitute_string() {
         value="$("$evaluator" "$script")"
 
         local status=$?
-        ((status != 0)) && error "Evaluate '$script'" "$status"
+        if ((status != 0)); then
+          [[ "$strict" == true ]] && error "Evaluate '$script'" "$status"
+          value="${source:offset:index-offset}"
+        fi
 
         output+="$value"
         continue
@@ -316,6 +321,7 @@ function substitute_string() {
   done
 
   printf "%s" "$output"
+  return 0
 }
 
 function evaluate_string_parser() {
@@ -387,23 +393,24 @@ function evaluate_string_parser() {
 
 function getter() {
   local -n keys="$1"
-
-  return 2
+echo 87
+  return 1
 }
 
 function evaluator() {
   local value="$1"
 
   bash -c "
-  set -euo pipefail
+  set -euo pipefail    # fail fast, catch unset variables, propagate pipeline failures
+  set -o errtrace       # propagate ERR trap into functions/subshells
   $(declare -f)
   $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
   var() {
-      local -a path_keys=(\"\$1\")
-      getter path_keys
+        local -a path_keys=(\"\$1\")
+        getter path_keys
     }
-  $value
+    $value
   "
 }
 
-substitute_string getter evaluator 'Some $<echo $(($(var test) + 1))>'
+substitute_string -s false getter evaluator 'Some $<val=$(var test)||exit $?;echo $((val + 1))>'
