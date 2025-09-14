@@ -62,7 +62,7 @@ function user_input() {
   # Build prompt arguments
   local prompt_args=("$@")
   if [[ -n "$default" ]]; then
-    prompt_args+=("${default_color}[${default}]> ")
+    prompt_args+=("${input_color}[${default}]> ")
   else
     prompt_args=("> ")
   fi
