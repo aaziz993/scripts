@@ -280,7 +280,7 @@ function assign_in_file() {
     value="${value#"${BASH_REMATCH[0]}"}"
   fi
 
-  yq -i -r=false eval-all '(select(fileIndex==0) // {}) as $source | $source'"${path:+.$path} $assign"' select(fileIndex==1) | $source'  "$source" <(printf "%s" "$value")
+  yq -i -r=false eval-all '(select(fileIndex==0) // {}) as $source | $source'"${path:+.$path} $assign"' select(fileIndex==1) | $source' "$source" <(printf "%s" "$value")
 }
 
 function slice_in_file() {
@@ -352,54 +352,56 @@ function decode_file() {
     local merged_imports
 
     merged_imports="$(merge decoded_imports "*n")"
-
     decoded_file="$(substitute -ud false -s false "" "$decoded_file" | substitute "$merged_imports")"
-
     assign "" "*=" "$decoded_file" "$merged_imports"
   }
 
-  function decode_file_inner() {
+  ansi_span "\033[0;32mFile:" " $file\n" >&2
+
+  decode_file_inner() {
     local file="$1"
-    local depth="$2"
+    local prefix="$2"
     local decoded_file
     local import_file
     local merged_import_files=()
 
-    local indent
-    if ((depth == 0)); then
-      indent=""
-    else
-      indent="$(printf '    %.0s' $(seq 1 "$depth"))"
-    fi
-
-    ansi_span "\033[0;32mFile:" " $file\n" >&2
-
     decoded_file="$("$decoder" "$file")"
+    merged_files[$file]=""
 
-    merged_files[$file]=
+    local import_files
+    mapfile -t import_files < <("$imports" "$file" "$decoded_file")
+    local total=${#import_files[@]}
+    local index
 
-    while IFS= read -r import_file; do
-      printf "%s└──" "$indent" >&2
+    for index in "${!import_files[@]}"; do
+      import_file="${import_files[$index]}"
+      local is_last=$(( index == total - 1 ? 1 : 0 ))
+      local connector="├──"
+      [[ $is_last -eq 1 ]] && connector="└──"
 
       if [[ -v merged_files[$import_file] ]]; then
         if [[ -n "${merged_files[$import_file]}" ]]; then
-          ansi_span "\033[0;33mFile:" " $import_file ↻\n" >&2
+          ansi_span "${prefix}${connector} " "\033[0;33mFile:" " $import_file ↻\n" >&2
           merged_import_files+=("${merged_files[$import_file]}")
         else
           error "Detected cycle '$file' -> '$import_file'"
         fi
       else
-        decode_file_inner "$import_file" $((depth + 1))
+        ansi_span "${prefix}${connector} " "\033[0;32mFile:" " $import_file\n" >&2
+
+        local nex_prefix
+        [[ $is_last -eq 1 ]] && nex_prefix+="   " || nex_prefix+="│  "
+
+        decode_file_inner "$import_file" "$nex_prefix"
         merged_import_files+=("$merged")
       fi
-    done < <("$imports" "$file" "$decoded_file")
+    done
 
     merged="$("$merger" "$decoded_file" merged_import_files)"
-
     merged_files[$file]="$merged"
   }
 
-  decode_file_inner "$file" 0
+  decode_file_inner "$file" ""
 
   printf "%s" "$merged"
 }
