@@ -177,9 +177,10 @@ function substitute_string() {
         groups+=("$(jq -r '@base64d' <<<"$item")")
       done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_BRACED_START_PATTERN" $index "$source")")
       if ((${#groups[@]} > 0)); then
+        local offset=$index
+
         ((index += ${#groups[0]}))
 
-        local fallback_value="${groups[0]}"
         local -a path_keys=()
 
         while true; do
@@ -193,21 +194,14 @@ function substitute_string() {
           ((index += ${#groups[0]}))
 
           path_keys+=("${groups[1]}")
-          fallback_value+="${groups[0]}"
 
-          if [[ "${source:index:1}" == "." ]]; then
-            ((index += 1))
-
-            fallback_value+="."
-          fi
+          [[ "${source:index:1}" == "." ]] && ((index += 1))
         done
 
         check '(( ${#path_keys[@]} == 0 ))' "Empty interpolate"
         check '[[ "${source:index:1}" != "}" ]]' "Missing closing brace at '$index' ${source:index}"
 
         ((index += 1))
-
-        fallback_value+="}"
 
         local path_plain
         path_plain="$(join_to_string path_keys ".")"
@@ -225,7 +219,7 @@ function substitute_string() {
             cache[$path_plain]="$value"
           elif ((status > 1)); then
             [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
-            value="$fallback_value"
+            value="${source:offset:index}"
           fi
         fi
 
@@ -239,26 +233,26 @@ function substitute_string() {
         groups+=("$(jq -r '@base64d' <<<"$item")")
       done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" $index "$source")")
       if ((${#groups[@]} > 0)); then
+        local offset="${#groups[0]}"
         local -a path_keys=()
-        local fallback_value="${groups[0]}"
 
         while true; do
           groups=()
           while IFS= read -r item; do
             groups+=("$(jq -r '@base64d' <<<"$item")")
-          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $((index + ${#fallback_value[@]})) "$source")")
+          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $((index + offset)) "$source")")
 
           ((${#groups[@]} == 0)) && break
 
-          fallback_value+="${groups[0]}"
+          ((offset += "${#groups[0]}"))
 
           path_keys+=("${groups[1]}")
 
-          [[ "${source:index:1}" == "." ]] && fallback_value+="."
+          [[ "${source:index+offset:1}" == "." ]] && ((offset += 1))
         done
 
         if ((${#path_keys[@]} > 0)); then
-          ((index += ${#fallback_value}))
+          ((index += offset))
 
           local path_plain
           path_plain="$(join_to_string path_keys ".")"
@@ -276,7 +270,7 @@ function substitute_string() {
               cache[$path_plain]="$value"
             elif ((status > 1)); then
               [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
-              value="$fallback_value"
+              value="${source:index-offset:index}"
             fi
           fi
 
@@ -403,8 +397,8 @@ function evaluate_string() {
 
 function getter() {
   local -n keys="$1"
-  return 2
+
   printf "%s" "$(join_to_string keys ".")"
 }
 
-substitute_string -i true -s false getter "" "Some \${   test.    \"o\"   .'other'   } "
+substitute_string -i true -s false getter "" "Some \${   test.    \"o\"   .'other'   } \$\"some\".opa.jet"
