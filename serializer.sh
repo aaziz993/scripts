@@ -196,10 +196,7 @@ function substitute() {
     local path
     local value
 
-    path="$(
-      IFS='.'
-      echo "${keys[*]}"
-    )"
+    path="$(join_to_string keys ".")"
 
     contains "$path" "$global_values" || return 2
 
