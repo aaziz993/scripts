@@ -113,7 +113,7 @@ function assign() {
   local value="$3"
   local source="${4:-}"
 
-  if [[ "$value" =~ ^[[:space:]]*[|\>]-?[[:space:]]*\\n ]]; then
+  if is_str <<<"$value" && [[ "$value" =~ ^[[:space:]]*[|\>]-?[[:space:]]*\\n ]]; then
     value="${value#"${BASH_REMATCH[0]}"}"
   fi
 
@@ -208,7 +208,7 @@ function substitute() {
     contains "$path" "$global_values" || return 2
 
     value="$(get "$path" "$global_values")"
-    echo -e "Path:$path -> Value[$(is_scalar<<<"$value" && echo true || false)]\n<<$value>>" >&2
+
     if is_scalar <<<"$value"; then
       printf "%s" "$value"
     else
@@ -276,7 +276,7 @@ function assign_in_file() {
   local value="$3"
   local source="$4"
 
-  if [[ "$value" =~ ^[[:space:]]*[|\>]-?[[:space:]]*\\n ]]; then
+  if is_str <<<"$value" && [[ "$value" =~ ^[[:space:]]*[|\>]-?[[:space:]]*\\n ]]; then
     value="${value#"${BASH_REMATCH[0]}"}"
   fi
 
