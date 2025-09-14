@@ -149,10 +149,6 @@ function substitute_string() {
   local index=0
   local -A cache=()
 
-  function skip_evaluator() {
-    printf "%s" "$1"
-  }
-
   while ((index < ${#source})); do
     local groups=()
 
@@ -198,8 +194,8 @@ function substitute_string() {
           [[ "${source:index:1}" == "." ]] && ((index += 1))
         done
 
-        check '(( ${#path_keys[@]} == 0 ))' "Empty interpolate"
-        check '[[ "${source:index:1}" != "}" ]]' "Missing closing brace at '$index' ${source:index}"
+        check '(( ${#path_keys[@]} == 0 ))' "Empty interpolate at '$index' in $source"
+        check '[[ "${source:index:1}" != "}" ]]' "Missing } at '$index' in $source"
 
         ((index += 1))
 
@@ -291,8 +287,7 @@ function substitute_string() {
         ((index += ${#groups[0]}))
 
         local script
-        script="$(evaluate_string skip_evaluator "${source:index-1}")"
-        script="${script:1:-1}"
+        script="$(evaluate_string_parser "${source:index-1}")"
 
         ((index += ${#script} + 1))
 
@@ -323,13 +318,13 @@ function substitute_string() {
   printf "%s" "$output"
 }
 
-function evaluate_string() {
-  local evaluator="${1:-bash_c}"
+function evaluate_string_parser() {
   local source
-  source="$(src "${2:-}")"
+  source="$(src "${1:-}")"
   local output=""
-  local index=0
-  depth=0
+  local index=1
+
+  [[ "${source:0:1}" != "<" ]] && error "Missing < at '0' in $source"
 
   while ((index < ${#source})); do
     local groups=()
@@ -360,31 +355,17 @@ function evaluate_string() {
     # Opening brace
     if [[ "${source:index:1}" == "<" ]]; then
       ((index += 1))
-      ((depth++))
 
-      output+="<"
+      error "Extra < at '$index' in $source"
       continue
     fi
 
     # Closing brace
     if [[ "${source:index:1}" == ">" ]]; then
       ((index += 1))
-      ((depth--))
 
-      output+=">"
-
-      if ((depth == 0)); then
-        local value
-        value="$("$evaluator" "$output")"
-
-        local status=$?
-        ((status != 0)) && error "Evaluate" $status
-
-        printf "%s" "$value"
-        return
-      fi
-
-      continue
+      printf "%s" "$output"
+      return
     fi
 
     while IFS= read -r item; do
@@ -401,7 +382,7 @@ function evaluate_string() {
     ((index += 1))
   done
 
-  error "Unbalanced evaluate '<>'"
+  error "Missing > at '${#source}' in '$source'"
 }
 
 function getter() {
@@ -412,22 +393,17 @@ function getter() {
 
 function evaluator() {
   local value="$1"
-  local getter="${2-getter}"
 
   bash -c "
   set -euo pipefail
   $(declare -f)
   $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
   var() {
-    local -a path_keys=(\"\$1\")
-    getter path_keys
-    local status=\$?
-    if ((status != 0)); then
-        echo 'Getter failed' >&2
-        exit \$status
-    fi
+      local -a path_keys=(\"\$1\")
+      getter path_keys
     }
-  $value"
+  $value
+  "
 }
 
 substitute_string getter evaluator 'Some $<echo $(($(var test) + 1))>'
