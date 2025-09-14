@@ -233,27 +233,30 @@ function substitute_string() {
         groups+=("$(jq -r '@base64d' <<<"$item")")
       done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" $index "$source")")
       if ((${#groups[@]} > 0)); then
-        local offset="${#groups[0]}"
+        local offset=$index
+
+        ((index += "${#groups[0]}"))
+
         local -a path_keys=()
 
         while true; do
           groups=()
           while IFS= read -r item; do
             groups+=("$(jq -r '@base64d' <<<"$item")")
-          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $((index + offset)) "$source")")
+          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $index "$source")")
 
           ((${#groups[@]} == 0)) && break
 
-          ((offset += "${#groups[0]}"))
+          ((index += "${#groups[0]}"))
 
           path_keys+=("${groups[1]}")
 
-          [[ "${source:index+offset:1}" == "." ]] && ((offset += 1))
+          [[ "${source:index:1}" == "." ]] && ((index += 1))
         done
 
-        if ((${#path_keys[@]} > 0)); then
-          ((index += offset))
-
+        if ((${#path_keys[@]} == 0)); then
+          ((index -= offset))
+        else
           local path_plain
           path_plain="$(join_to_string path_keys ".")"
           local value
@@ -270,7 +273,7 @@ function substitute_string() {
               cache[$path_plain]="$value"
             elif ((status > 1)); then
               [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
-              value="${source:index-offset:index}"
+              value="${source:offset:index}"
             fi
           fi
 
