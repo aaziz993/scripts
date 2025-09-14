@@ -190,7 +190,7 @@ function substitute_string() {
           local status=$?
           if ((status == 0)); then
             value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
-              -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
+              -ud "$unescape_dollars" -s "$strict" "$getter" "$evaluator" <<<"$value")"
             cache[$key]="$value"
           elif ((status > 1)); then
             [[ "$strict" == true ]] && error "Unresolved '$key'" "$status"
@@ -252,7 +252,7 @@ function substitute_string() {
           local status=$?
           if ((status == 0)); then
             value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
-              -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
+              -ud "$unescape_dollars" -s "$strict" "$getter" "$evaluator" <<<"$value")"
             cache[$path_plain]="$value"
           elif ((status > 1)); then
             [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
