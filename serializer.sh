@@ -392,24 +392,3 @@ function decode_file() {
 
   printf "%s" "$merged"
 }
-
-
-example=$(
-  cat <<'EOF'
-func: ${values.str}
-test: 90
-values:
-  testing: Testing
-  greet: Hello
-  nested: ${values.greet}, World!
-  j: ${values.some}
-  some:
-    structure: vAL
-  str: >
-    Something ${values.nested} $<echo $((98+546))> $<var values.j> Other
-  str2: |
-    Greetings $test
-EOF
-)
-
-substitute -i true "" "$example"
