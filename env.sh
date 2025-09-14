@@ -34,5 +34,9 @@ function bash_env() {
 function bash_c() {
   local value="$1"
 
-  bash -c "set -euo pipefail; $value"
+  bash -c "
+  set -euo pipefail    # fail fast, catch unset variables, propagate pipeline failures
+  set -o errtrace      # propagate ERR trap into functions/subshells
+  $value
+  "
 }
