@@ -403,10 +403,3 @@ function decode_file() {
 
   printf "%s" "$merged"
 }
-
-v1=$(
-  cat <<'EOF'
-values:
-  some: 100
-EOF
-)
