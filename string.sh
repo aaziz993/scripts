@@ -12,8 +12,10 @@
 
 ID_PATTERN='[_\p{L}][_\p{L}\p{N}]*'
 KEY_PATTERN='[_\p{L}\p{N}][_\p{L}\p{N}-]*'
-SINGLE_QUOTED_STRING_PATTERN="'(?:[^'\\\\]|\\.)*'"
-DOUBLE_QUOTED_STRING_PATTERN='"(?:[^"\\\\]|\\.)*"'
+SINGLE_QUOTED_STRING_PLAIN_PATTERN="(?:[^'\\\\]|\\.)*"
+SINGLE_QUOTED_STRING_PATTERN="'$SINGLE_QUOTED_STRING_PLAIN_PATTERN'"
+DOUBLE_QUOTED_STRING_PLAIN_PATTERN='(?:[^"\\\\]|\\.)*'
+DOUBLE_QUOTED_STRING_PATTERN='"'"$DOUBLE_QUOTED_STRING_PLAIN_PATTERN"'"'
 
 function is_blank() {
   local source
@@ -96,7 +98,7 @@ function match_at() {
 }
 
 EVEN_DOLLARS_PATTERN='(?:\$\$)+'
-INTERPOLATE_KEY='\s*('"$KEY_PATTERN"'|'"$SINGLE_QUOTED_STRING_PATTERN"'|'"$DOUBLE_QUOTED_STRING_PATTERN"')\s*'
+INTERPOLATE_KEY='\s*('"$KEY_PATTERN"')|'"'($SINGLE_QUOTED_STRING_PLAIN_PATTERN)'"'|"'"($DOUBLE_QUOTED_STRING_PLAIN_PATTERN)"'"\s*'
 INTERPOLATE_PATTERN='\$('"$INTERPOLATE_KEY"')'
 INTERPOLATE_START_PATTERN='\$\{'
 EVALUATE_START_PATTERN='\$\<'
@@ -224,14 +226,12 @@ function substitute_string() {
 
           ((index += ${#groups[0]}))
 
-          key="$(trim '"' <<<"${groups[1]}")"
-
-          path_keys+=("$key")
+          path_keys+=("${groups[1]}")
           interpolate_content+="${groups[0]}"
 
           if [[ "${source:index:1}" == "." ]]; then
             ((index += 1))
-            interpolate_content="."
+            interpolate_content+="."
           fi
         done
 
