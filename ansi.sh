@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 
-ANSI_ESC=$'\033'
-ANSI_PATTERN="$ANSI_ESC\[[0-9;?]*[A-Za-z]"
+ANSI_RESET='\033'
 
-function ansi_span() {
+ansi_span() {
   local arg
 
   for arg in "$@"; do
-    if [[ "$arg" =~ $ANSI_PATTERN ]]; then
-      # append reset only if color code is present
-      printf "%b%s" "$arg" "${ANSI_ESC}[0m"
+    # match actual CSI sequence at start
+    if [[ $arg == *"$ANSI_RESET"* ]]; then
+      printf "%b%b" "$arg" "${ANSI_RESET}[0m"
     else
       printf "%b" "$arg"
     fi
