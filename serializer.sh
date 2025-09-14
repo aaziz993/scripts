@@ -224,7 +224,7 @@ function substitute() {
 
     bash -c "
         $(declare -f)
-        $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_PATTERN INTERPOLATE_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
+        $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
         $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache)
         function var() {
           inner_substitute_string \"\$1\" \"\$global_source\"
@@ -386,7 +386,7 @@ function decode_file() {
           ansi_span "\033[0;33mFile:" " $import_file ↻\n" >&2
           merged_import_files+=("${merged_files[$import_file]}")
         else
-          error "Detected cycle '$file' -> '$import_file'" "$?"
+          error "Detected cycle '$file' -> '$import_file'"
         fi
       else
         decode_file_inner "$import_file" $((depth + 1))

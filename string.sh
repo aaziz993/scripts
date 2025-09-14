@@ -217,7 +217,7 @@ function substitute_string() {
             value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
               -ud "$unescape_dollars" -s "$strict" "$getter" "$evaluator" <<<"$value")"
             cache[$path_plain]="$value"
-          elif ((status > 1)); then
+          elif ((status != 1)); then
             [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
             value="${source:offset:index-offset}"
           fi
@@ -271,7 +271,7 @@ function substitute_string() {
               value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
                 -ud "$unescape_dollars" -s "$strict" "$getter" "$evaluator" <<<"$value")"
               cache[$path_plain]="$value"
-            elif ((status > 1)); then
+            elif ((status != 1)); then
               [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
               value="${source:offset:index-offset}"
             fi
