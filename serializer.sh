@@ -155,6 +155,7 @@ function substitute() {
   local interpolate_braced=true
   local evaluate=true
   local unescape_dollars=true
+  local strict=true
 
   while [[ "$1" == -* ]]; do
     case "$1" in
@@ -172,6 +173,10 @@ function substitute() {
       ;;
     -ud | --unescape-dollars)
       unescape_dollars="${2:-true}"
+      shift 2
+      ;;
+    -s | --strict)
+      strict="${2:-true}"
       shift 2
       ;;
     *)
