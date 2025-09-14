@@ -55,14 +55,39 @@ function download_absent_file() {
 }
 
 function user_input() {
-  local label="$1"
-  local label_color="${2:-}"
-  local input_color="${3:-}"
-  local input
+  local default="${1:-}"       # Default value
+  local input_color="${2:-}"   # Color for user input
+  shift 2
 
-  printf "$label_color%s: $input_color" "$label" >&2
+  # Build prompt arguments
+  local prompt_args=("$@")
+  if [[ -n "$default" ]]; then
+    prompt_args+=("${default_color}[${default}]> ")
+  else
+    prompt_args=("> ")
+  fi
+
+  # Print prompt
+  ansi_span "${prompt_args[@]}" >&2
+
+  # Set input color if provided
+  if [[ -n "$input_color" ]]; then
+    printf "%b" "$input_color" >&2
+  fi
+
+  # Read input
+  local input
   read -r input
+
+  # Reset colors
   printf "\033[0m" >&2
 
-  printf "%s" "$input"
+  # Return input or default
+  if [[ -n "$input" ]]; then
+    printf "%s" "$input"
+  elif [[ -n "$default" ]]; then
+    printf "%s" "$default"
+  else
+    error "No input provided and no default available"
+  fi
 }
