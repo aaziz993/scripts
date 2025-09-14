@@ -387,7 +387,7 @@ function decode_file() {
           error "Detected cycle '$file' -> '$import_file'"
         fi
       else
-        ansi_span "$prefix$connector " "\033[0;32mFile:" " $import_file\n" >&2
+        ansi_span "$prefix$connector " "\033[0;32mFile:" " $import_file \n" >&2
 
         local next_prefix="$prefix"
         [[ $is_last -eq 1 ]] && next_prefix+="   " || next_prefix+="│  "
