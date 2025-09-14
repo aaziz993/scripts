@@ -108,6 +108,7 @@ function substitute_string() {
   local interpolate_braced=true
   local evaluate=true
   local unescape_dollars=true
+  local strict=true
 
   while [[ "$1" == -* ]]; do
     case "$1" in
@@ -125,6 +126,10 @@ function substitute_string() {
       ;;
     -ud | --unescape-dollars)
       unescape_dollars="${2:-true}"
+      shift 2
+      ;;
+    -s | --strict)
+      strict="${2:-true}"
       shift 2
       ;;
     *)
@@ -161,7 +166,6 @@ function substitute_string() {
         [[ "$unescape_dollars" == true ]] && dollars="$(halve <<<"$dollars")"
 
         output+="$dollars"
-
         continue
       fi
     fi
@@ -184,18 +188,18 @@ function substitute_string() {
           value="$("$getter" path_keys)"
 
           local status=$?
-          ((status > 1)) && error "Unresolved '$key'" "$status"
-
           if ((status == 0)); then
-            groups=()
-
             value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
               -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
-
             cache[$key]="$value"
+          elif ((status > 1)); then
+            [[ "$strict" == true ]] && error "Unresolved '$key'" "$status"
+            value="${groups[0]}"
           fi
         fi
+
         output+="$value"
+        continue
       fi
     fi
 
@@ -208,6 +212,7 @@ function substitute_string() {
         ((index += ${#groups[0]}))
 
         local -a path_keys=()
+        local interpolate_content=
 
         while true; do
           groups=()
@@ -223,8 +228,12 @@ function substitute_string() {
           key="$(trim '"' <<<"${groups[1]}")"
 
           path_keys+=("$key")
+          interpolate_content+="${groups[0]}"
 
-          [[ "${source:index:1}" == "." ]] && ((index += 1))
+          if [[ "${source:index:1}" == "." ]]; then
+            ((index += 1))
+            interpolate_content="."
+          fi
         done
 
         check '(( ${#path_keys[@]} == 0 ))' "Empty interpolation"
@@ -232,29 +241,26 @@ function substitute_string() {
 
         ((index += 1))
 
-        local plain_path
-        plain_path="$(join_to_string path_keys ".")"
+        local path_plain
+        path_plain="$(join_to_string path_keys ".")"
 
-        if [[ -v "${cache[$plain_path]}" ]]; then
-          value="${cache[$plain_path]}"
+        if [[ -v "${cache[$path_plain]}" ]]; then
+          value="${cache[$path_plain]}"
         else
           value="$("$getter" path_keys)"
 
           local status=$?
-          ((status > 1)) && error "Unresolved '$plain_path'" "$status"
-
           if ((status == 0)); then
-            groups=()
-
             value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
               -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
-
-            cache[$plain_path]="$value"
+            cache[$path_plain]="$value"
+          elif ((status > 1)); then
+            [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
+            value="\${$interpolate_content}"
           fi
         fi
 
         output+="$value"
-
         continue
       fi
     fi
@@ -289,7 +295,6 @@ function substitute_string() {
       ((index += ${#groups[0]}))
 
       output+="${groups[0]}"
-
       continue
     fi
 
@@ -320,7 +325,6 @@ function evaluate_string() {
       ((index += ${#groups[0]}))
 
       output+="${groups[0]}"
-
       continue
     fi
 
@@ -332,28 +336,25 @@ function evaluate_string() {
       ((index += ${#groups[0]}))
 
       output+="${groups[0]}"
-
       continue
     fi
 
     # Opening brace
     if [[ "${source:index:1}" == "<" ]]; then
       ((index += 1))
-
-      output+="<"
-
       ((depth++))
 
+      output+="<"
       continue
     fi
 
     # Closing brace
     if [[ "${source:index:1}" == ">" ]]; then
       ((index += 1))
+      ((depth--))
 
       output+=">"
 
-      ((depth--))
       if ((depth == 0)); then
         "$evaluator" "$output"
         return
@@ -369,7 +370,6 @@ function evaluate_string() {
       ((index += ${#groups[0]}))
 
       output+="${groups[0]}"
-
       continue
     fi
 

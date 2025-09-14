@@ -201,7 +201,7 @@ function substitute() {
       echo "${keys[*]}"
     )"
 
-    contains "$path" "$global_values" || error "Unresolved '$path' in \n$global_values" 2
+    contains "$path" "$global_values" || return 2
 
     value="$(get "$path" "$global_values")"
 
@@ -220,7 +220,7 @@ function substitute() {
 
     bash -c "
         $(declare -f)
-        $(declare -p EVEN_DOLLARS_PATTERN INTERPOLATE_PATTERN KEY_PATTERN INTERPOLATE_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
+        $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_PATTERN KEY_OR_STRING_PATTERN INTERPOLATE_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
         $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache)
         function var() {
           inner_substitute_string \"\$1\" \"\$global_source\"
@@ -242,7 +242,7 @@ function substitute() {
 
       if is_str <<<"$value"; then
         value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" -ud "$unescape_dollars" \
-          inner_getter inner_evaluator <<<"$value")"
+          -s "$strict" inner_getter inner_evaluator <<<"$value")"
         global_cache[$path]="$value"
       fi
     fi
@@ -342,7 +342,7 @@ function decode_file() {
 
     merged_imports="$(merge decoded_imports "*n")"
 
-    decoded_file="$(substitute -ud false "" "$decoded_file" | substitute "$merged_imports")"
+    decoded_file="$(substitute -ud false -s false "" "$decoded_file" | substitute "$merged_imports")"
 
     assign "" "*=" "$decoded_file" "$merged_imports"
   }
@@ -375,7 +375,7 @@ function decode_file() {
           ansi_span "\033[0;33mFile:" " $import_file ↻\n" >&2
           merged_import_files+=("${merged_files[$import_file]}")
         else
-          error "Detected cycle '$file' -> '$import_file'"
+          error "Detected cycle '$file' -> '$import_file'" "$?"
         fi
       else
         decode_file_inner "$import_file" $((depth + 1))
@@ -392,3 +392,24 @@ function decode_file() {
 
   printf "%s" "$merged"
 }
+
+
+example=$(
+  cat <<'EOF'
+func: ${values.str}
+test: 90
+values:
+  testing: Testing
+  greet: Hello
+  nested: ${values.greet}, World!
+  j: ${values.some}
+  some:
+    structure: vAL
+  str: >
+    Something ${values.nested} $<echo $((98+546))> $<var values.j> Other
+  str2: |
+    Greetings $test
+EOF
+)
+
+substitute -i true "" "$example"
