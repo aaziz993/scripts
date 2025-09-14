@@ -179,8 +179,8 @@ function substitute_string() {
       if ((${#groups[@]} > 0)); then
         ((index += ${#groups[0]}))
 
+        local fallback_value="${groups[0]}"
         local -a path_keys=()
-        local interpolate_content=
 
         while true; do
           groups=()
@@ -193,11 +193,12 @@ function substitute_string() {
           ((index += ${#groups[0]}))
 
           path_keys+=("${groups[1]}")
-          interpolate_content+="${groups[0]}"
+          fallback_value+="${groups[0]}"
 
           if [[ "${source:index:1}" == "." ]]; then
             ((index += 1))
-            interpolate_content+="."
+
+            fallback_value+="."
           fi
         done
 
@@ -206,8 +207,11 @@ function substitute_string() {
 
         ((index += 1))
 
+        fallback_value+="}"
+
         local path_plain
         path_plain="$(join_to_string path_keys ".")"
+        local value
 
         if [[ -v "${cache[$path_plain]}" ]]; then
           value="${cache[$path_plain]}"
@@ -221,7 +225,7 @@ function substitute_string() {
             cache[$path_plain]="$value"
           elif ((status > 1)); then
             [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
-            value="\${$interpolate_content}"
+            value="$fallback_value"
           fi
         fi
 
@@ -236,27 +240,25 @@ function substitute_string() {
       done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" $index "$source")")
       if ((${#groups[@]} > 0)); then
         local -a path_keys=()
-        local interpolate_content=
-
-        local offset=${#groups[0]}
+        local fallback_value="${groups[0]}"
 
         while true; do
           groups=()
           while IFS= read -r item; do
             groups+=("$(jq -r '@base64d' <<<"$item")")
-          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $((index + offset)) "$source")")
+          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $((index + ${#fallback_value[@]})) "$source")")
 
           ((${#groups[@]} == 0)) && break
 
-          ((offset += "${#groups[0]}"))
+          fallback_value+="${groups[0]}"
 
           path_keys+=("${groups[1]}")
 
-          [[ "${source:index:1}" == "." ]] && ((offset += 1))
+          [[ "${source:index:1}" == "." ]] && fallback_value+="."
         done
 
         if ((${#path_keys[@]} > 0)); then
-          ((index += offset))
+          ((index += ${#fallback_value}))
 
           local path_plain
           path_plain="$(join_to_string path_keys ".")"
@@ -274,7 +276,7 @@ function substitute_string() {
               cache[$path_plain]="$value"
             elif ((status > 1)); then
               [[ "$strict" == true ]] && error "Unresolved '$path_plain'" "$status"
-              value="${source:index-offset:index}"
+              value="$fallback_value"
             fi
           fi
 
@@ -401,8 +403,8 @@ function evaluate_string() {
 
 function getter() {
   local -n keys="$1"
-return 2
+  return 2
   printf "%s" "$(join_to_string keys ".")"
 }
 
-substitute_string -i true -s false getter "" "Some \${   test.    \"o\"   .'other'   } \$\"some\".opa.jet"
+substitute_string -i true -s false getter "" "Some \${   test.    \"o\"   .'other'   } "
