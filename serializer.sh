@@ -381,18 +381,18 @@ function decode_file() {
 
       if [[ -v merged_files[$import_file] ]]; then
         if [[ -n "${merged_files[$import_file]}" ]]; then
-          ansi_span "${prefix}${connector} " "\033[0;33mFile:" " $import_file ↻\n" >&2
+          ansi_span "$prefix$connector " "\033[0;33mFile:" " $import_file ↻\n" >&2
           merged_import_files+=("${merged_files[$import_file]}")
         else
           error "Detected cycle '$file' -> '$import_file'"
         fi
       else
-        ansi_span "${prefix}${connector} " "\033[0;32mFile:" " $import_file\n" >&2
+        ansi_span "$prefix$connector " "\033[0;32mFile:" " $import_file\n" >&2
 
-        local nex_prefix
-        [[ $is_last -eq 1 ]] && nex_prefix+="   " || nex_prefix+="│  "
+        local next_prefix
+        [[ $is_last -eq 1 ]] && next_prefix+="   " || next_prefix+="│  "
 
-        decode_file_inner "$import_file" "$nex_prefix"
+        decode_file_inner "$import_file" "$next_prefix"
         merged_import_files+=("$merged")
       fi
     done
