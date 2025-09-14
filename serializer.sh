@@ -117,7 +117,7 @@ function assign() {
     value="${value#"${BASH_REMATCH[0]}"}"
   fi
 
-  yq -r=false eval-all 'select(fileIndex==0).'"$path"' = select(fileIndex==1) | select(fileIndex==0)' <(src "$source") <(printf "%s" "$value")
+  yq -r=false eval-all '(select(fileIndex==0) // {}) as $source | $source'"${path:+.$path}"' '$assign' select(fileIndex==1) | $source' <(src "$source") <(printf "%s" "$value")
 }
 
 function slice() {
@@ -280,7 +280,7 @@ function assign_in_file() {
     value="${value#"${BASH_REMATCH[0]}"}"
   fi
 
-  yq -i -r=false eval-all 'select(fileIndex==0).'"$path"' = select(fileIndex==1)' "$source" <(printf "%s" "$value")
+  yq -i -r=false eval-all '(select(fileIndex==0) // {}) as $source | $source.some = select(fileIndex==1) | $source'  "$source" <(printf "%s" "$value")
 }
 
 function slice_in_file() {
@@ -403,3 +403,12 @@ function decode_file() {
 
   printf "%s" "$merged"
 }
+
+v1=$(
+  cat <<'EOF'
+values:
+  some: 100
+EOF
+)
+
+assign "some" = "$(cat "test.yaml")" "out.yaml"
