@@ -97,7 +97,7 @@ function match_at() {
 }
 
 EVEN_DOLLARS_PATTERN='(?:\$\$)+'
-INTERPOLATE_KEY='\s*(?|((?:'"$ID_PATTERN"'|[\d+-])+)|\[(\d+)\]|"('"$DOUBLE_QUOTED_STRING_PLAIN_PATTERN"')")\s*'
+INTERPOLATE_KEY='\s*(?|((?:'"$ID_PATTERN"'|[\d-])+)|\[(\d+)\]|"('"$DOUBLE_QUOTED_STRING_PLAIN_PATTERN"')")\s*'
 INTERPOLATE_START_PATTERN='\$'
 INTERPOLATE_BRACED_START_PATTERN='\$\{'
 EVALUATE_START_PATTERN='\$\<'
