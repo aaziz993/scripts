@@ -183,7 +183,7 @@ function substitute_string() {
 
           path_keys+=("${groups[1]}")
 
-          ((index >= ${#source})) && return 1
+          ((index >= ${#source})) && error "Missing } at '${#source}' in '$source'"
 
           [[ "${source:index:1}" == "." ]] && ((index += 1))
         done
