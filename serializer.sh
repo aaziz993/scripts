@@ -162,7 +162,6 @@ function substitute() {
   local interpolate_braced=true
   local evaluate=true
   local unescape_dollars=true
-  local strict=true
 
   while [[ "$1" == -* ]]; do
     case "$1" in
@@ -180,10 +179,6 @@ function substitute() {
       ;;
     -ud | --unescape-dollars)
       unescape_dollars="${2:-true}"
-      shift 2
-      ;;
-    -s | --strict)
-      strict="${2:-true}"
       shift 2
       ;;
     *)
@@ -245,9 +240,14 @@ function substitute() {
       value="$(get "$path" "$source")"
 
       if is_str <<<"$value"; then
-        value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" -ud "$unescape_dollars" \
-          -s "$strict" inner_getter inner_evaluator <<<"$value")"
-        global_cache[$path]="$value"
+        local substituted
+        substituted="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
+          -ud "$unescape_dollars" inner_getter inner_evaluator <<<"$value")"
+
+        local status=$?
+        ((status != 0)) && substituted="$value"
+
+        global_cache[$path]="$substituted"
       fi
     fi
 
@@ -352,7 +352,7 @@ function decode_file() {
     local merged_imports
 
     merged_imports="$(merge decoded_imports "*n")"
-    decoded_file="$(substitute -ud false -s false "" "$decoded_file" | substitute "$merged_imports")"
+    decoded_file="$(substitute -ud false "" "$decoded_file" | substitute "$merged_imports")"
     assign "" "*=" "$decoded_file" "$merged_imports"
   }
 
