@@ -11,7 +11,6 @@
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/env.sh"
 
 ID_PATTERN='[_\p{L}][_\p{L}\p{N}]*'
-KEY_PATTERN='[_\p{L}\p{N}][_\p{L}\p{N}-]*'
 SINGLE_QUOTED_STRING_PLAIN_PATTERN="(?:[^'\\\\]|\\.)*"
 SINGLE_QUOTED_STRING_PATTERN="'$SINGLE_QUOTED_STRING_PLAIN_PATTERN'"
 DOUBLE_QUOTED_STRING_PLAIN_PATTERN='(?:[^"\\\\]|\\.)*'
@@ -98,7 +97,7 @@ function match_at() {
 }
 
 EVEN_DOLLARS_PATTERN='(?:\$\$)+'
-INTERPOLATE_KEY='\s*(?|('"$KEY_PATTERN"')|\[(\d+)\]|'"'($SINGLE_QUOTED_STRING_PLAIN_PATTERN)'"'|"('"$DOUBLE_QUOTED_STRING_PLAIN_PATTERN"')")\s*'
+INTERPOLATE_KEY='\s*(?|('"$ID_PATTERN"'|[\d+-])|\[(\d+)\]|"('"$DOUBLE_QUOTED_STRING_PLAIN_PATTERN"')")\s*'
 INTERPOLATE_START_PATTERN='\$'
 INTERPOLATE_BRACED_START_PATTERN='\$\{'
 EVALUATE_START_PATTERN='\$\<'
@@ -184,6 +183,8 @@ function substitute_string() {
 
           path_keys+=("${groups[1]}")
 
+          ((index >= ${#source})) && return 1
+
           [[ "${source:index:1}" == "." ]] && ((index += 1))
         done
 
@@ -238,6 +239,8 @@ function substitute_string() {
           ((index += "${#groups[0]}"))
 
           path_keys+=("${groups[1]}")
+
+          ((index >= ${#source})) && break
 
           [[ "${source:index:1}" == "." ]] && ((index += 1))
         done
@@ -376,27 +379,3 @@ function evaluate_string_parser() {
 
   error "Missing > at '${#source}' in '$source'"
 }
-
-function getter() {
-  local -n keys="$1"
-  echo 87
-  return 1
-}
-
-function evaluator() {
-  local value="$1"
-
-  bash -c "
-  set -euo pipefail    # fail fast, catch unset variables, propagate pipeline failures
-  set -o errtrace       # propagate ERR trap into functions/subshells
-  $(declare -f)
-  $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
-  var() {
-        local -a path_keys=(\"\$1\")
-        getter path_keys
-    }
-    $value
-  "
-}
-
-substitute_string -s false getter evaluator 'Some $<val=$(var test)||exit $?;echo $((val + 1))>'
