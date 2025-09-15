@@ -208,7 +208,7 @@ function substitute() {
       printf "%s" "$value"
     else
       inner_substitute "$value"
-      return 1
+      return 100
     fi
 
     return 0
@@ -240,18 +240,12 @@ function substitute() {
       value="$(get "$path" "$source")"
 
       if is_str <<<"$value"; then
-        local substituted
-        substituted="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
-          -ud "$unescape_dollars" inner_getter inner_evaluator <<<"$value")"
+        value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
+          -ud "$unescape_dollars" inner_getter inner_evaluator global_cache <<<"$value")"
 
-        local status=$?
-        ((status != 0)) && substituted="$value"
-
-        global_cache[$path]="$substituted"
+        global_cache[$path]="$value"
       fi
     fi
-
-    printf "%s" "$value"
   }
 
   function inner_substitute() {
@@ -405,3 +399,23 @@ function decode_file() {
 
   printf "%s" "$merged"
 }
+
+example=$(
+  cat <<'EOF'
+func: ${values.str}
+test: 90
+values:
+  testing: Testing
+  greet: Hello
+  nested: ${values.greet}, World!
+  j: ${values.some}
+  some:
+    structure: vAL
+  str: >
+    Something ${values.nested} $<echo $((98+546))> $<var values.j> Other
+  str2: |
+    Greetings $test
+EOF
+)
+
+substitute -i true "" "$example"

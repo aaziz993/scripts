@@ -97,7 +97,7 @@ function match_at() {
 }
 
 EVEN_DOLLARS_PATTERN='(?:\$\$)+'
-INTERPOLATE_KEY='\s*(?|((?:'"$ID_PATTERN"'|[\d-])+)|\[(\d+)\]|"('"$DOUBLE_QUOTED_STRING_PLAIN_PATTERN"')")\s*'
+INTERPOLATE_KEY='\s*(?|((?:'"$ID_PATTERN"'|[-\d])+)|\[(\d+)\]|"('"$DOUBLE_QUOTED_STRING_PLAIN_PATTERN"')")\s*'
 INTERPOLATE_START_PATTERN='\$'
 INTERPOLATE_BRACED_START_PATTERN='\$\{'
 EVALUATE_START_PATTERN='\$\<'
@@ -137,117 +137,67 @@ function substitute_string() {
 
   local getter="${1:-bash_env}"
   local evaluator="${2:-bash_c}"
+  local -n cache="${3:-empty_cache}"
+  local -A empty_cache=()
   local source
-  source="$(src "${3:-}")"
-  local output=""
-  local index=0
-  local -A cache=()
+  source="$(src "${4:-}")"
 
-  while ((index < ${#source})); do
-    local groups=()
+  function inner_substitute_string() {
+    local inner_source
+    inner_source="$(src "${1:-}")"
+    local output=""
+    local index=0
 
-    if [[ "$interpolate" == true || "$interpolate_braced" == true || "$evaluate" == true ]]; then
-      while IFS= read -r item; do
-        groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVEN_DOLLARS_PATTERN" $index "$source")")
-      if ((${#groups[@]} > 0)); then
-        ((index += ${#groups[0]}))
+    while ((index < ${#inner_source})); do
+      local groups=()
 
-        local dollars="${groups[1]}"
-
-        [[ "$unescape_dollars" == true ]] && dollars="$(halve <<<"$dollars")"
-
-        output+="$dollars"
-        continue
-      fi
-    fi
-
-    if [[ "$interpolate_braced" == true ]]; then
-      while IFS= read -r item; do
-        groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_BRACED_START_PATTERN" $index "$source")")
-      if ((${#groups[@]} > 0)); then
-        ((index += ${#groups[0]}))
-
-        local -a path_keys=()
-
-        while true; do
-          groups=()
-          while IFS= read -r item; do
-            groups+=("$(jq -r '@base64d' <<<"$item")")
-          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $index "$source")")
-
-          ((${#groups[@]} == 0)) && break
-
+      if [[ "$interpolate" == true || "$interpolate_braced" == true || "$evaluate" == true ]]; then
+        while IFS= read -r item; do
+          groups+=("$(jq -r '@base64d' <<<"$item")")
+        done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVEN_DOLLARS_PATTERN" $index "$inner_source")")
+        if ((${#groups[@]} > 0)); then
           ((index += ${#groups[0]}))
 
-          path_keys+=("${groups[1]}")
+          local dollars="${groups[1]}"
 
-          ((index >= ${#source})) && error "Missing } at '${#source}' in '$source'"
+          [[ "$unescape_dollars" == true ]] && dollars="$(halve <<<"$dollars")"
 
-          [[ "${source:index:1}" == "." ]] && ((index += 1))
-        done
-
-        check '(( ${#path_keys[@]} == 0 ))' "Empty interpolate at '$index' in $source"
-        check '[[ "${source:index:1}" != "}" ]]' "Missing } at '$index' in $source"
-
-        ((index += 1))
-
-        local path_plain
-        path_plain="$(join_to_string path_keys ".")"
-        local value
-
-        if [[ -v "${cache[$path_plain]}" ]]; then
-          value="${cache[$path_plain]}"
-        else
-          value="$("$getter" path_keys)"
-
-          local status=$?
-          if ((status == 0)); then
-            value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
-              -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
-            cache[$path_plain]="$value"
-          elif ((status != 1)); then
-            return 1
-          fi
+          output+="$dollars"
+          continue
         fi
-
-        output+="$value"
-        continue
       fi
-    fi
 
-    if [[ "$interpolate" == true ]]; then
-      while IFS= read -r item; do
-        groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" $index "$source")")
-      if ((${#groups[@]} > 0)); then
-        local offset=$index
+      if [[ "$interpolate_braced" == true ]]; then
+        while IFS= read -r item; do
+          groups+=("$(jq -r '@base64d' <<<"$item")")
+        done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_BRACED_START_PATTERN" $index "$inner_source")")
+        if ((${#groups[@]} > 0)); then
+          ((index += ${#groups[0]}))
 
-        ((index += "${#groups[0]}"))
+          local -a path_keys=()
 
-        local -a path_keys=()
+          while true; do
+            groups=()
+            while IFS= read -r item; do
+              groups+=("$(jq -r '@base64d' <<<"$item")")
+            done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $index "$inner_source")")
 
-        while true; do
-          groups=()
-          while IFS= read -r item; do
-            groups+=("$(jq -r '@base64d' <<<"$item")")
-          done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $index "$source")")
+            ((${#groups[@]} == 0)) && break
 
-          ((${#groups[@]} == 0)) && break
+            ((index += ${#groups[0]}))
 
-          ((index += "${#groups[0]}"))
+            path_keys+=("${groups[1]}")
 
-          path_keys+=("${groups[1]}")
+            ((index >= ${#inner_source})) && error "Missing } at '${#inner_source}' in '$inner_source'"
 
-          ((index >= ${#source})) && break
+            [[ "${inner_source:index:1}" == "." ]] && ((index += 1))
+          done
 
-          [[ "${source:index:1}" == "." ]] && ((index += 1))
-        done
+          check '(( ${#path_keys[@]} == 0 ))' "Empty interpolate at '$index' in $inner_source"
+          check '[[ "${inner_source:index:1}" != "}" ]]' "Missing } at '$index' in $inner_source"
 
-        if ((${#path_keys[@]} == 0)); then
-          index=$offset
-        else
+          ((index += 1))
+
           local path_plain
           path_plain="$(join_to_string path_keys ".")"
           local value
@@ -259,10 +209,10 @@ function substitute_string() {
 
             local status=$?
             if ((status == 0)); then
-              value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
-                -ud "$unescape_dollars" "$getter" "$evaluator" <<<"$value")"
+              value="$(inner_substitute_string <<<"$value")"
               cache[$path_plain]="$value"
-            elif ((status != 1)); then
+            elif ((status != 100)); then
+              printf "%s" "$inner_source"
               return 1
             fi
           fi
@@ -271,46 +221,107 @@ function substitute_string() {
           continue
         fi
       fi
-    fi
 
-    if [[ "$evaluate" == true ]]; then
+      if [[ "$interpolate" == true ]]; then
+        while IFS= read -r item; do
+          groups+=("$(jq -r '@base64d' <<<"$item")")
+        done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" $index "$inner_source")")
+        if ((${#groups[@]} > 0)); then
+          local offset=$index
+
+          ((index += "${#groups[0]}"))
+
+          local -a path_keys=()
+
+          while true; do
+            groups=()
+            while IFS= read -r item; do
+              groups+=("$(jq -r '@base64d' <<<"$item")")
+            done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_KEY" $index "$inner_source")")
+
+            ((${#groups[@]} == 0)) && break
+
+            ((index += "${#groups[0]}"))
+
+            path_keys+=("${groups[1]}")
+
+            ((index >= ${#inner_source})) && break
+
+            [[ "${inner_source:index:1}" == "." ]] && ((index += 1))
+          done
+
+          if ((${#path_keys[@]} == 0)); then
+            index=$offset
+          else
+            local path_plain
+            path_plain="$(join_to_string path_keys ".")"
+            local value
+
+            if [[ -v "${cache[$path_plain]}" ]]; then
+              value="${cache[$path_plain]}"
+            else
+              value="$("$getter" path_keys)"
+
+              local status=$?
+              if ((status == 0)); then
+                value="$(inner_substitute_string <<<"$value")"
+                cache[$path_plain]="$value"
+              elif ((status != 100)); then
+                printf "%s" "$inner_source"
+                return 1
+              fi
+            fi
+
+            output+="$value"
+            continue
+          fi
+        fi
+      fi
+
+      if [[ "$evaluate" == true ]]; then
+        while IFS= read -r item; do
+          groups+=("$(jq -r '@base64d' <<<"$item")")
+        done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_START_PATTERN" $index "$inner_source")")
+        if ((${#groups[@]} > 0)); then
+          ((index += ${#groups[0]}))
+
+          local script
+          script="$(evaluate_string_parser "${inner_source:index-1}")"
+
+          ((index += ${#script} + 1))
+
+          value="$("$evaluator" "$script")"
+
+          local status=$?
+          if ((status != 0)); then
+            printf "%s" "$inner_source"
+            return $status
+          fi
+
+          output+="$value"
+          continue
+        fi
+      fi
+
       while IFS= read -r item; do
         groups+=("$(jq -r '@base64d' <<<"$item")")
-      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_START_PATTERN" $index "$source")")
+      done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$SUBSTITUTE_OTHER_PATTERN" $index "$inner_source")")
       if ((${#groups[@]} > 0)); then
         ((index += ${#groups[0]}))
 
-        local script
-        script="$(evaluate_string_parser "${source:index-1}")"
-
-        ((index += ${#script} + 1))
-
-        value="$("$evaluator" "$script")"
-
-        local status=$?
-        ((status != 0)) && return 1
-
-        output+="$value"
+        output+="${groups[0]}"
         continue
       fi
-    fi
 
-    while IFS= read -r item; do
-      groups+=("$(jq -r '@base64d' <<<"$item")")
-    done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$SUBSTITUTE_OTHER_PATTERN" $index "$source")")
-    if ((${#groups[@]} > 0)); then
-      ((index += ${#groups[0]}))
+      output+="${inner_source:index:1}"
+      ((index += 1))
+    done
 
-      output+="${groups[0]}"
-      continue
-    fi
+    printf "%s" "$output"
+    return 0
+  }
 
-    output+="${source:index:1}"
-    ((index += 1))
-  done
-
-  printf "%s" "$output"
-  return 0
+  inner_substitute_string <<<"$source"
 }
 
 function evaluate_string_parser() {
