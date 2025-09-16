@@ -193,75 +193,86 @@ function substitute() {
   local global_values="${1:-$global_source}"
   local -A global_cache=()
 
-  function inner_getter() {
+  function _getter() {
     local -n keys="$1"
     local path
     local value
 
     path="$(join_to_string keys ".")"
 
-    contains "$path" "$global_values" || return 2
+    contains "$path" "$global_values" || return $UNRESOLVED
 
     value="$(get "$path" "$global_values")"
 
     if is_scalar <<<"$value"; then
       printf "%s" "$value"
+      return $DEEP_RESOLVE
     else
-      inner_substitute "$value"
-      return 100
+      _substitute "$value"
     fi
-
-    return 0
   }
 
-  function inner_evaluator() {
+  function _evaluator() {
     local value="$1"
 
     bash -c "
       set -euo pipefail
+      set -o errtrace
       $(declare -f)
-      $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN)
+      $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN DEEP_RESOLVE UNRESOLVED)
       $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache)
       function var() {
-        inner_substitute_string \"\$1\" \"\$global_source\"
+        _substitute_string0 \"\$1\" \"\$global_source\"
+        local status=\$?
+        ((status == 0 || status==\$UNRESOLVED)) && printf \"%s\" \"\$global_value\"
+        return \$status
       }
       $value
     "
   }
 
-  function inner_substitute_string() {
+  local global_value
+
+  function _substitute_string0() {
     local path="$1"
     local source="$2"
-    local value
 
-    if [[ -v "${global_cache[$path]}" ]]; then
-      value="${global_cache[$path]}"
+    if [[ -v global_cache[$path] ]]; then
+      global_value="${global_cache[$path]}"
     else
-      value="$(get "$path" "$source")"
+      global_value="$(get "$path" "$source")"
 
-      if is_str <<<"$value"; then
-        value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
-          -ud "$unescape_dollars" inner_getter inner_evaluator global_cache <<<"$value")"
+      if is_str <<<"$global_value"; then
+        local substituted_value
+        substituted_value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
+          -ud "$unescape_dollars" _getter _evaluator global_cache <<<"$global_value")"
 
-        global_cache[$path]="$value"
+        local status=$?
+        ((status == 0)) && global_value="$substituted_value"
+
+        ((status == 0 || status == UNRESOLVED)) && global_cache[$path]="$global_value"
+
+        return $status
       fi
     fi
   }
 
-  function inner_substitute() {
+  function _substitute() {
     local source="$1"
 
     while IFS= read -r path; do
-      local value
-      value="$(inner_substitute_string "$path" "$source")"
+      _substitute_string0 "$path" "$source"
 
-      source="$(assign "$path" = "$value" "$source")"
+      local status=$?
+      ((status != 0 && status != UNRESOLVED)) && error "Unresolved '$path'" $status
+
+      source="$(assign "$path" = "$global_value" "$source")"
     done < <(yq '.. | select(tag == "!!str") | path | . as $path | map(["\"", ., "\""] | join("")) | join(".")' <<<"$source")
 
     printf "%s" "$source"
   }
 
-  inner_substitute "$global_source"
+  _substitute "$global_source"
 }
 
 function assign_in_file() {
@@ -352,7 +363,7 @@ function decode_file() {
 
   ansi_span "\033[0;32mFile:" " $file\n" >&2
 
-  decode_file_inner() {
+  _decode_file() {
     local file="$1"
     local prefix="$2"
     local decoded_file
@@ -386,7 +397,7 @@ function decode_file() {
         local next_prefix="$prefix"
         [[ $is_last -eq 1 ]] && next_prefix+="   " || next_prefix+="│  "
 
-        decode_file_inner "$import_file" "$next_prefix"
+        _decode_file "$import_file" "$next_prefix"
         merged_import_files+=("$merged")
       fi
     done
@@ -395,7 +406,7 @@ function decode_file() {
     merged_files[$file]="$merged"
   }
 
-  decode_file_inner "$file" ""
+  _decode_file "$file" ""
 
   printf "%s" "$merged"
 }
@@ -412,7 +423,7 @@ values:
   some:
     structure: vAL
   str: >
-    Something ${values.nested} $<echo $((98+546))> $<var values.j> Other
+    Something ${values.nested} $<echo $((98+546))> $<var values.k> Other
   str2: |
     Greetings $test
 EOF

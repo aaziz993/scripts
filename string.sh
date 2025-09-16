@@ -104,6 +104,9 @@ EVALUATE_START_PATTERN='\$\<'
 SUBSTITUTE_OTHER_PATTERN='[^$]+'
 EVALUATE_OTHER_PATTERN='[^"<>]+'
 
+DEEP_RESOLVE=100
+UNRESOLVED=101
+
 function substitute_string() {
   local interpolate=false
   local interpolate_braced=true
@@ -137,12 +140,12 @@ function substitute_string() {
 
   local getter="${1:-bash_env}"
   local evaluator="${2:-bash_c}"
-  local -n cache="${3:-empty_cache}"
   local -A empty_cache=()
+  local -n cache="${3:-empty_cache}"
   local source
   source="$(src "${4:-}")"
 
-  function inner_substitute_string() {
+  function _substitute_string() {
     local inner_source
     inner_source="$(src "${1:-}")"
     local output=""
@@ -202,18 +205,18 @@ function substitute_string() {
           path_plain="$(join_to_string path_keys ".")"
           local value
 
-          if [[ -v "${cache[$path_plain]}" ]]; then
+          if [[ -v cache[$path_plain] ]]; then
             value="${cache[$path_plain]}"
           else
             value="$("$getter" path_keys)"
 
             local status=$?
-            if ((status == 0)); then
-              value="$(inner_substitute_string <<<"$value")"
+            if ((status == DEEP_RESOLVE)); then
+              value="$(_substitute_string <<<"$value")"
               cache[$path_plain]="$value"
-            elif ((status != 100)); then
+            elif ((status != 0)); then
               printf "%s" "$inner_source"
-              return 1
+              return $status
             fi
           fi
 
@@ -257,18 +260,17 @@ function substitute_string() {
             path_plain="$(join_to_string path_keys ".")"
             local value
 
-            if [[ -v "${cache[$path_plain]}" ]]; then
+            if [[ -v cache[$path_plain] ]]; then
               value="${cache[$path_plain]}"
             else
               value="$("$getter" path_keys)"
 
               local status=$?
-              if ((status == 0)); then
-                value="$(inner_substitute_string <<<"$value")"
+              if ((status == DEEP_RESOLVE)); then
+                value="$(_substitute_string <<<"$value")"
                 cache[$path_plain]="$value"
-              elif ((status != 100)); then
-                printf "%s" "$inner_source"
-                return 1
+              elif ((status != 0)); then
+                return $status
               fi
             fi
 
@@ -293,10 +295,7 @@ function substitute_string() {
           value="$("$evaluator" "$script")"
 
           local status=$?
-          if ((status != 0)); then
-            printf "%s" "$inner_source"
-            return $status
-          fi
+          ((status != 0)) && return $status
 
           output+="$value"
           continue
@@ -318,10 +317,9 @@ function substitute_string() {
     done
 
     printf "%s" "$output"
-    return 0
   }
 
-  inner_substitute_string <<<"$source"
+  _substitute_string <<<"$source"
 }
 
 function evaluate_string_parser() {
