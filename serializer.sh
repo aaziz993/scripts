@@ -35,55 +35,45 @@ function type() {
   src "$source" | yq 'type'
 }
 
-function is_int() {
-  local source="${1:-}"
-  local type
-  type="$(src "$source" | type)"
+function is_type() {
+  local type="$1"
+  local source="${2:-}"
 
-  [[ "$type" == "!!int" ]] && return 0
+  [[ "$(src "$source" | type)" == "$type" ]] && return 0
 
   return 1
+}
+
+function is_bool() {
+  is_type "!!bool" "$1"
+}
+
+function is_int() {
+  is_type "!!int" "$1"
+}
+
+function is_float() {
+  is_type "!!float" "$1"
 }
 
 function is_str() {
-  local source="${1:-}"
-  local type
-  type="$(src "$source" | type)"
-
-  [[ "$type" == "!!str" ]] && return 0
-
-  return 1
-}
-
-function is_seq() {
-  local source="${1:-}"
-  local type
-  type="$(src "$source" | type)"
-
-  [[ "$type" == "!!seq" ]] && return 0
-
-  return 1
-}
-
-function is_map() {
-  local source="${1:-}"
-  local type
-  type="$(src "$source" | type)"
-
-  [[ "$type" == "!!map" ]] && return 0
-
-  return 1
+  is_type "!!str" "$1"
 }
 
 function is_scalar() {
-  local source
-  local type
+  is_bool "$1" || is_int "$1" || is_float "$1" || is_str "$1"
+}
 
-  source="$(src "${1:-}")"
+function is_seq() {
+  is_type "!!seq" "$1"
+}
 
-  is_int "$source" || is_str "$source" && return 0
+function is_map() {
+  is_type "!!map" "$1"
+}
 
-  return 1
+function is_object() {
+  is_seq "$1" || is_map "$1"
 }
 
 function coalesce() {
@@ -423,9 +413,9 @@ values:
   nested: ${values.greet}, World!
   j: ${values.some}
   some:
-    structure: vAL
+    structure: vAL ${greet}
   str: >
-    Something ${values.nested} $<echo $((98+546))> $<var values.k> Other
+    Something ${values.nested} $<echo $((98+546))> $<var values.j> Other
   str2: |
     Greetings $test
 EOF
