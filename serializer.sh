@@ -182,6 +182,7 @@ function substitute() {
   global_source="$(src "${2:-}")"
   local global_values="${1:-$global_source}"
   local -A global_cache=()
+  local global_value
 
   function _getter() {
     local -n keys="$1"
@@ -210,7 +211,7 @@ function substitute() {
       set -o errtrace
       $(declare -f)
       $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN DEEP_RESOLVE UNRESOLVED)
-      $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache)
+      $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache global_value)
       function var() {
         local path=\"\$1\"
         ! contains \"\$path\" <<<\"\$global_source\" && return \$UNRESOLVED
@@ -222,8 +223,6 @@ function substitute() {
       $value
     "
   }
-
-  local global_value
 
   function _substitute_string0() {
     local path="$1"
