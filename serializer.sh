@@ -214,10 +214,10 @@ function substitute() {
       $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache global_value)
       function var() {
         local path=\"\$1\"
-        ! contains \"\$path\" <<<\"\$global_source\" && return \$UNRESOLVED
+        ! contains \"\$path\" <<<\"\$global_source\" && return \$NO_SUCH_ELEMENT
         __substitute_string \"\$path\" \"\$global_source\"
         local status=\$?
-        ((status == 0 || status==\$UNRESOLVED)) && printf \"%s\" \"\$global_value\"
+        ((status == 0 || status==\$NO_SUCH_ELEMENT)) && printf \"%s\" \"\$global_value\"
         return \$status
       }
       $value
@@ -243,7 +243,7 @@ function substitute() {
         local status=$?
         ((status == 0)) && global_value="$substituted_value"
 
-        ((status == 0 || status == UNRESOLVED)) && global_cache["$path"]="$global_value"
+        ((status == 0 || status == NO_SUCH_ELEMENT)) && global_cache["$path"]="$global_value"
 
         return $status
       fi
