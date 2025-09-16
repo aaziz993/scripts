@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+NO_SUCH_ELEMENT=101
+
 function os_name() {
   uname -s
 }

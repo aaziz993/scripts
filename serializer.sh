@@ -191,7 +191,7 @@ function substitute() {
 
     path="$(join_to_string keys ".")"
 
-    contains "$path" <<<"$global_values" || return $UNRESOLVED
+    contains "$path" <<<"$global_values" || return $NO_SUCH_ELEMENT
 
     value="$(get "$path" <<<"$global_values")"
 
@@ -230,8 +230,8 @@ function substitute() {
 
     [[ $source == '"auth-vars"."keycloak"."realms"."oauth2"'* ]] && echo "$path">&2
 
-    if [[ -v global_cache[$path] ]]; then
-      global_value="${global_cache[$path]}"
+    if [[ -v global_cache["$path"] ]]; then
+      global_value="${global_cache["$path"]}"
     else
       global_value="$(get "$path" <<<"$source")"
 
@@ -243,7 +243,7 @@ function substitute() {
         local status=$?
         ((status == 0)) && global_value="$substituted_value"
 
-        ((status == 0 || status == UNRESOLVED)) && global_cache[$path]="$global_value"
+        ((status == 0 || status == UNRESOLVED)) && global_cache["$path"]="$global_value"
 
         return $status
       fi
@@ -364,7 +364,7 @@ function decode_file() {
     local merged_import_files=()
 
     decoded_file="$("$decoder" "$file")"
-    merged_files[$file]=""
+    merged_files["$file"]=""
 
     local import_files
     mapfile -t import_files < <("$imports" "$file" "$decoded_file")
@@ -377,10 +377,10 @@ function decode_file() {
       local connector="├──"
       [[ $is_last -eq 1 ]] && connector="└──"
 
-      if [[ -v merged_files[$import_file] ]]; then
-        if [[ -n "${merged_files[$import_file]}" ]]; then
+      if [[ -v merged_files["$import_file"] ]]; then
+        if [[ -n "${merged_files["$import_file"]}" ]]; then
           ansi_span "$prefix$connector" "\033[0;33mFile:" " $import_file ↑\n" >&2
-          merged_import_files+=("${merged_files[$import_file]}")
+          merged_import_files+=("${merged_files["$import_file"]}")
         else
           error "Detected cycle '$file' -> '$import_file'"
         fi
@@ -396,7 +396,7 @@ function decode_file() {
     done
 
     merged="$("$merger" "$decoded_file" merged_import_files)"
-    merged_files[$file]="$merged"
+    merged_files["$file"]="$merged"
   }
 
   _decode_file "$file" ""

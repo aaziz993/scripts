@@ -105,7 +105,6 @@ SUBSTITUTE_OTHER_PATTERN='[^$]+'
 EVALUATE_OTHER_PATTERN='[^"<>]+'
 
 DEEP_RESOLVE=100
-UNRESOLVED=101
 
 function substitute_string() {
   local interpolate=false
@@ -205,15 +204,15 @@ function substitute_string() {
           path_plain="$(join_to_string path_keys ".")"
           local value
 
-          if [[ -v cache[$path_plain] ]]; then
-            value="${cache[$path_plain]}"
+          if [[ -v cache["$path_plain"] ]]; then
+            value="${cache["$path_plain"]}"
           else
             value="$("$getter" path_keys)"
 
             local status=$?
             if ((status == DEEP_RESOLVE)); then
               value="$(_substitute_string "$value")"
-              cache[$path_plain]="$value"
+              cache["$path_plain"]="$value"
             elif ((status != 0)); then
               printf "%s" "$inner_source"
               return $status
@@ -260,15 +259,15 @@ function substitute_string() {
             path_plain="$(join_to_string path_keys ".")"
             local value
 
-            if [[ -v cache[$path_plain] ]]; then
-              value="${cache[$path_plain]}"
+            if [[ -v cache["$path_plain"] ]]; then
+              value="${cache["$path_plain"]}"
             else
               value="$("$getter" path_keys)"
 
               local status=$?
               if ((status == DEEP_RESOLVE)); then
                 value="$(_substitute_string "$value")"
-                cache[$path_plain]="$value"
+                cache["$path_plain"]="$value"
               elif ((status != 0)); then
                 return $status
               fi
