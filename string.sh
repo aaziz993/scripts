@@ -219,7 +219,7 @@ function substitute_string() {
             elif ((status == DEEP_RESOLVE)); then
               value="$(_substitute_string "$value")"
             elif ((status != 0)); then
-              error "Interpolate braced '$path_plain' at '$offset' in $inner_source" $status
+              error "Interpolate braced '$path_plain' at '$offset' in '$inner_source'" $status
             fi
 
             cache["$path_plain"]="$value"
@@ -277,7 +277,7 @@ function substitute_string() {
               elif ((status == DEEP_RESOLVE)); then
                 value="$(_substitute_string "$value")"
               elif ((status != 0)); then
-                error "Interpolate '$path_plain' at '$offset' in $inner_source" $status
+                error "Interpolate '$path_plain' at '$offset' in '$inner_source'" $status
               fi
 
               cache["$path_plain"]="$value"
@@ -311,7 +311,7 @@ function substitute_string() {
             value="${inner_source:offset:index-offset}"
             return_status=$status
           elif ((status != 0)); then
-            error "Evaluate '$script' at '$index' in $inner_source"
+            error "Evaluate '$script' at '$index' in '$inner_source'" $status
           fi
 
           output+="$value"
@@ -346,7 +346,7 @@ function evaluate_string_parser() {
   local output=""
   local index=1
 
-  [[ "${source:0:1}" != "<" ]] && error "Missing < at '0' in $source"
+  [[ "${source:0:1}" != "<" ]] && error "Missing < at '0' in '$source'"
 
   while ((index < ${#source})); do
     local groups=()
@@ -375,7 +375,7 @@ function evaluate_string_parser() {
     fi
 
     # Opening brace
-    [[ "${source:index:1}" == "<" ]] && error "Extra < at '$index' in $source"
+    [[ "${source:index:1}" == "<" ]] && error "Extra < at '$index' in '$source'"
 
     # Closing brace
     if [[ "${source:index:1}" == ">" ]]; then
