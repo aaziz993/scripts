@@ -216,7 +216,7 @@ function substitute() {
         local path=\"\$1\"
 
         ! contains \"\$path\" <<<\"\$global_source\" && return \$NO_SUCH_ELEMENT
-        __substitute_string \"\$path\" \"\$global_source\"
+        _substitutor \"\$path\" \"\$global_source\"
         local status=\$?
         ((status == 0 || status==\$NO_SUCH_ELEMENT)) && printf \"%s\" \"\$global_value\"
         return \$status
@@ -225,7 +225,7 @@ function substitute() {
     "
   }
 
-  function __substitute_string() {
+  function _substitutor() {
     local path="$1"
     local source="$2"
 
@@ -255,7 +255,7 @@ function substitute() {
     local source="$1"
 
     while IFS= read -r path; do
-      __substitute_string "$path" "$source"
+      _substitutor "$path" "$source"
 
       local status=$?
       ((status != 0 && status != NO_SUCH_ELEMENT)) && error "Unresolved '$path'" $status
