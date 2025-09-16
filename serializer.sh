@@ -206,9 +206,7 @@ function substitute() {
   function _evaluator() {
     local value="$1"
 
-    bash -c "
-      set -euo pipefail
-      set -o errtrace
+    bash_c "
       $(declare -f)
       $(declare -p ANSI_RESET SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN NO_SUCH_ELEMENT DEEP_RESOLVE)
       $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache global_value)
@@ -218,7 +216,7 @@ function substitute() {
         ! contains \"\$path\" <<<\"\$global_source\" && return \$NO_SUCH_ELEMENT
         _substitutor \"\$path\" \"\$global_source\"
         local status=\$?
-        ((status == 0 || status==\$NO_SUCH_ELEMENT)) && printf \"%s\" \"\$global_value\"
+        ((status == 0)) && printf \"%s\" \"\$global_value\"
         return \$status
       }
       $value
@@ -229,20 +227,16 @@ function substitute() {
     local path="$1"
     local source="$2"
 
-    [[ $source == '"auth-vars"."keycloak"."realms"."oauth2"'* ]] && echo "$path">&2
-
     if [[ -v global_cache["$path"] ]]; then
       global_value="${global_cache["$path"]}"
     else
       global_value="$(get "$path" <<<"$source")"
 
       if is_str "$global_value"; then
-        local substituted_value
-        substituted_value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
+        global_value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
           -ud "$unescape_dollars" _getter _evaluator global_cache <<<"$global_value")"
 
         local status=$?
-        ((status == 0)) && global_value="$substituted_value"
 
         ((status == 0 || status == NO_SUCH_ELEMENT)) && global_cache["$path"]="$global_value"
 
@@ -404,3 +398,27 @@ function decode_file() {
 
   printf "%s" "$merged"
 }
+
+
+v=$(cat<<EOF
+iac-vars:
+  v: 100
+  tld: org
+  storageClassName: longhorn-v2-data-engine
+# ---------------------------------------------------------------------------------------
+# Exports -- expose configuration values to particular consumers
+# ---------------------------------------------------------------------------------------
+
+# Configuration nested under the "environmentVariables" key is used to export environment
+# variables when using \`esc open --format shell\`, \`esc run\`, or \`pulumi up/preview/refresh/destroy\`
+environmentVariables: {}
+# Configuration nested under the "pulumiConfig" key will be available to Pulumi stacks that
+# reference this Environment during \`pulumi up/preview/refresh/destroy\`
+pulumiConfig:
+  iac-vars:
+    tld: org
+    storageClassName: longhorn-v2-data-engine
+EOF
+)
+
+get values PulumiEsc.common-vars.yaml | substitute -ud false | substitute "$v"

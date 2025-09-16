@@ -174,6 +174,8 @@ function substitute_string() {
           groups+=("$(jq -r '@base64d' <<<"$item")")
         done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_BRACED_START_PATTERN" $index "$inner_source")")
         if ((${#groups[@]} > 0)); then
+          local offset=$index
+
           ((index += ${#groups[0]}))
 
           local -a path_keys=()
@@ -210,13 +212,15 @@ function substitute_string() {
             value="$("$getter" path_keys)"
 
             local status=$?
-            if ((status == DEEP_RESOLVE)); then
+            if ((status == NO_SUCH_ELEMENT)); then
+              value="${inner_source:offset:index-offset}"
+            elif ((status == DEEP_RESOLVE)); then
               value="$(_substitute_string "$value")"
-              cache["$path_plain"]="$value"
             elif ((status != 0)); then
-              printf "%s" "$inner_source"
               return $status
             fi
+
+            cache["$path_plain"]="$value"
           fi
 
           output+="$value"
@@ -265,12 +269,15 @@ function substitute_string() {
               value="$("$getter" path_keys)"
 
               local status=$?
-              if ((status == DEEP_RESOLVE)); then
+              if ((status == NO_SUCH_ELEMENT)); then
+                value="${inner_source:offset:index-offset}"
+              elif ((status == DEEP_RESOLVE)); then
                 value="$(_substitute_string "$value")"
-                cache["$path_plain"]="$value"
               elif ((status != 0)); then
                 return $status
               fi
+
+              cache["$path_plain"]="$value"
             fi
 
             output+="$value"
