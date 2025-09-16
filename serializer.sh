@@ -200,9 +200,9 @@ function substitute() {
 
     path="$(join_to_string keys ".")"
 
-    contains "$path" "$global_values" || return $UNRESOLVED
+    contains "$path" <<<"$global_values" || return $UNRESOLVED
 
-    value="$(get "$path" "$global_values")"
+    value="$(get "$path" <<<"$global_values")"
 
     if is_scalar <<<"$value"; then
       printf "%s" "$value"
@@ -222,7 +222,9 @@ function substitute() {
       $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN DEEP_RESOLVE UNRESOLVED)
       $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache)
       function var() {
-        _substitute_string0 \"\$1\" \"\$global_source\"
+        local path=\"\$1\"
+        ! contains \"\$path\"<<<\"\$global_source\" && return \$UNRESOLVED
+        _substitute_string0 \"\$path\" \"\$global_source\"
         local status=\$?
         ((status == 0 || status==\$UNRESOLVED)) && printf \"%s\" \"\$global_value\"
         return \$status
@@ -240,7 +242,7 @@ function substitute() {
     if [[ -v global_cache[$path] ]]; then
       global_value="${global_cache[$path]}"
     else
-      global_value="$(get "$path" "$source")"
+      global_value="$(get "$path" <<<"$source")"
 
       if is_str <<<"$global_value"; then
         local substituted_value
