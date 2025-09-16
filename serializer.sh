@@ -210,12 +210,12 @@ function substitute() {
       set -euo pipefail
       set -o errtrace
       $(declare -f)
-      $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN DEEP_RESOLVE UNRESOLVED)
+      $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN NO_SUCH_ELEMENT DEEP_RESOLVE)
       $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache global_value)
       function var() {
         local path=\"\$1\"
         ! contains \"\$path\" <<<\"\$global_source\" && return \$UNRESOLVED
-        _substitute_string0 \"\$path\" \"\$global_source\"
+        __substitute_string \"\$path\" \"\$global_source\"
         local status=\$?
         ((status == 0 || status==\$UNRESOLVED)) && printf \"%s\" \"\$global_value\"
         return \$status
@@ -224,7 +224,7 @@ function substitute() {
     "
   }
 
-  function _substitute_string0() {
+  function __substitute_string() {
     local path="$1"
     local source="$2"
 
@@ -254,10 +254,10 @@ function substitute() {
     local source="$1"
 
     while IFS= read -r path; do
-      _substitute_string0 "$path" "$source"
+      __substitute_string "$path" "$source"
 
       local status=$?
-      ((status != 0 && status != UNRESOLVED)) && error "Unresolved '$path'" $status
+      ((status != 0 && status != NO_SUCH_ELEMENT)) && error "Unresolved '$path'" $status
 
       source="$(assign "$path" = "$global_value" "$source")"
     done < <(yq '.. | select(tag == "!!str") | path | . as $path | map(["\"", ., "\""] | join("")) | join(".")' <<<"$source")
