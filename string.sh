@@ -199,7 +199,7 @@ function substitute_string() {
             [[ "${inner_source:index:1}" == "." ]] && ((index += 1))
           done
 
-          check '(( ${#path_keys[@]} == 0 ))' "Empty interpolate at '$index' in $inner_source"
+          check '(( ${#path_keys[@]} == 0 ))' "Empty interpolate at '$offset' in $inner_source"
           check '[[ "${inner_source:index:1}" != "}" ]]' "Missing } at '$index' in $inner_source"
 
           ((index += 1))
