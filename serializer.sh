@@ -45,19 +45,19 @@ function is_type() {
 }
 
 function is_bool() {
-  is_type "!!bool"<<< "$1"
+  is_type "!!bool" <<<"$1"
 }
 
 function is_int() {
-  is_type "!!int"<<< "$1"
+  is_type "!!int" <<<"$1"
 }
 
 function is_float() {
-  is_type "!!float"<<< "$1"
+  is_type "!!float" <<<"$1"
 }
 
 function is_str() {
-  is_type "!!str"<<< "$1"
+  is_type "!!str" <<<"$1"
 }
 
 function is_scalar() {
@@ -65,11 +65,11 @@ function is_scalar() {
 }
 
 function is_seq() {
-  is_type "!!seq"<<< "$1"
+  is_type "!!seq" <<<"$1"
 }
 
 function is_map() {
-  is_type "!!map"<<< "$1"
+  is_type "!!map" <<<"$1"
 }
 
 function is_object() {
@@ -190,13 +190,9 @@ function substitute() {
 
     path="$(join_to_string keys ".")"
 
-    contains "$path" "$global_values" || return $UNRESOLVED
+    contains "$path" <<<"$global_values" || return $UNRESOLVED
 
-    value="$(get "$path" "$global_values")"
-
-    is_scalar "$value"
-
-    echo "V:$value:$?">&2
+    value="$(get "$path" <<<"$global_values")"
 
     if is_scalar "$value"; then
       printf "%s" "$value"
@@ -217,7 +213,7 @@ function substitute() {
       $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache)
       function var() {
         local path=\"\$1\"
-        ! contains \"\$path\" \"\$global_source\" && return \$UNRESOLVED
+        ! contains \"\$path\" <<<\"\$global_source\" && return \$UNRESOLVED
         _substitute_string0 \"\$path\" \"\$global_source\"
         local status=\$?
         ((status == 0 || status==\$UNRESOLVED)) && printf \"%s\" \"\$global_value\"
@@ -236,7 +232,7 @@ function substitute() {
     if [[ -v global_cache[$path] ]]; then
       global_value="${global_cache[$path]}"
     else
-      global_value="$(get "$path" "$source")"
+      global_value="$(get "$path" <<<"$source")"
 
       if is_str "$global_value"; then
         local substituted_value
