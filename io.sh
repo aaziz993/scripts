@@ -6,7 +6,7 @@
 function src() {
   local source="${1:-}"
 
-  if [[ -t 0 || -n "$source" ]]; then
+  if [[ -n "$source" || -t 0 ]]; then
     if [[ -f "$source" ]]; then
       cat "$source"
     else
