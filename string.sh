@@ -162,7 +162,7 @@ function substitute_string() {
         if ((${#groups[@]} > 0)); then
           ((index += ${#groups[0]}))
 
-          local dollars="${groups[1]}"
+          local dollars="${groups[0]}"
 
           [[ "$unescape_dollars" == true ]] && dollars="$(halve <<<"$dollars")"
 
@@ -407,3 +407,10 @@ function evaluate_string_parser() {
 
   error "Missing > at '${#source}' in '$source'"
 }
+
+function getter(){
+  local -n keys="$1"
+  join_to_string keys "."
+}
+
+substitute_string -ud false getter "" "" "redis://\$\${redis-vars.databases.redis0.name}.\$\${redis-vars.namespace}.svc.cluster.local:\$\${redis-vars.databases.redis0.port}/0"
