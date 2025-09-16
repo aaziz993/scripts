@@ -149,7 +149,6 @@ function substitute_string() {
     inner_source="$1"
     local output=""
     local index=0
-    local offset
     local return_status=0
 
     while ((index < ${#inner_source})); do
@@ -176,7 +175,7 @@ function substitute_string() {
           groups+=("$(jq -r '@base64d' <<<"$item")")
         done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_BRACED_START_PATTERN" $index "$inner_source")")
         if ((${#groups[@]} > 0)); then
-          offset=$index
+          local offset=$index
 
           ((index += ${#groups[0]}))
 
@@ -236,7 +235,7 @@ function substitute_string() {
           groups+=("$(jq -r '@base64d' <<<"$item")")
         done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" $index "$inner_source")")
         if ((${#groups[@]} > 0)); then
-          offset=$index
+          local offset=$index
 
           ((index += "${#groups[0]}"))
 
@@ -295,7 +294,7 @@ function substitute_string() {
           groups+=("$(jq -r '@base64d' <<<"$item")")
         done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_START_PATTERN" $index "$inner_source")")
         if ((${#groups[@]} > 0)); then
-          offset=$index
+          local offset=$index
 
           ((index += ${#groups[0]}))
 
