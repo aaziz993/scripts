@@ -149,6 +149,8 @@ function substitute_string() {
     inner_source="$1"
     local output=""
     local index=0
+    local offset
+    local return_status=0
 
     while ((index < ${#inner_source})); do
       local groups=()
@@ -174,7 +176,7 @@ function substitute_string() {
           groups+=("$(jq -r '@base64d' <<<"$item")")
         done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_BRACED_START_PATTERN" $index "$inner_source")")
         if ((${#groups[@]} > 0)); then
-          local offset=$index
+          offset=$index
 
           ((index += ${#groups[0]}))
 
@@ -214,10 +216,11 @@ function substitute_string() {
             local status=$?
             if ((status == NO_SUCH_ELEMENT)); then
               value="${inner_source:offset:index-offset}"
+              return_status=$status
             elif ((status == DEEP_RESOLVE)); then
               value="$(_substitute_string "$value")"
             elif ((status != 0)); then
-              return $status
+              error "Interpolate braced '$path_plain' at '$offset' in $inner_source" $status
             fi
 
             cache["$path_plain"]="$value"
@@ -233,7 +236,7 @@ function substitute_string() {
           groups+=("$(jq -r '@base64d' <<<"$item")")
         done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$INTERPOLATE_START_PATTERN" $index "$inner_source")")
         if ((${#groups[@]} > 0)); then
-          local offset=$index
+          offset=$index
 
           ((index += "${#groups[0]}"))
 
@@ -271,10 +274,11 @@ function substitute_string() {
               local status=$?
               if ((status == NO_SUCH_ELEMENT)); then
                 value="${inner_source:offset:index-offset}"
+                return_status=$status
               elif ((status == DEEP_RESOLVE)); then
                 value="$(_substitute_string "$value")"
               elif ((status != 0)); then
-                return $status
+                error "Interpolate '$path_plain' at '$offset' in $inner_source" $status
               fi
 
               cache["$path_plain"]="$value"
@@ -291,6 +295,8 @@ function substitute_string() {
           groups+=("$(jq -r '@base64d' <<<"$item")")
         done < <(jq -c '.groupValues[] | @base64' <<<"$(match_at "$EVALUATE_START_PATTERN" $index "$inner_source")")
         if ((${#groups[@]} > 0)); then
+          offset=$index
+
           ((index += ${#groups[0]}))
 
           local script
@@ -301,7 +307,13 @@ function substitute_string() {
           value="$("$evaluator" "$script")"
 
           local status=$?
-          ((status != 0)) && return $status
+
+          if ((status == NO_SUCH_ELEMENT)); then
+            value="${inner_source:offset:index-offset}"
+            return_status=$status
+          elif ((status != 0)); then
+            error "Evaluate '$script' at '$index' in $inner_source"
+          fi
 
           output+="$value"
           continue
@@ -323,6 +335,7 @@ function substitute_string() {
     done
 
     printf "%s" "$output"
+    return $return_status
   }
 
   _substitute_string "$source"
