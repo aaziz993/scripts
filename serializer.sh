@@ -205,7 +205,7 @@ function substitute() {
 
   function _evaluator() {
     local value="$1"
-
+    echo "Script:$value" >&2
     bash -c "
       set -euo pipefail
       set -o errtrace
@@ -218,7 +218,6 @@ function substitute() {
         _substitute_string0 \"\$path\" \"\$global_source\"
         local status=\$?
         ((status == 0 || status==\$UNRESOLVED)) && printf \"%s\" \"\$global_value\"
-        echo \"p:\$path->\$status\">&2
         return \$status
       }
       $value
@@ -228,6 +227,8 @@ function substitute() {
   function _substitute_string0() {
     local path="$1"
     local source="$2"
+
+    [[ $source == '"auth-vars"."keycloak"."realms"."oauth2"'* ]] && echo "$path">&2
 
     if [[ -v global_cache[$path] ]]; then
       global_value="${global_cache[$path]}"
@@ -353,7 +354,7 @@ function decode_file() {
     assign "" "*=" "$decoded_file" "$merged_imports"
   }
 
-  ansi_span "\033[0;32mFile:" " $file\n" >&2
+  ansi_span "\033[0;32mFile:" " $file \n" >&2
 
   _decode_file() {
     local file="$1"
@@ -378,7 +379,7 @@ function decode_file() {
 
       if [[ -v merged_files[$import_file] ]]; then
         if [[ -n "${merged_files[$import_file]}" ]]; then
-          ansi_span "$prefix$connector" "\033[0;33m↻File:" " $import_file \n" >&2
+          ansi_span "$prefix$connector" "\033[0;33mFile:" " $import_file ↑\n" >&2
           merged_import_files+=("${merged_files[$import_file]}")
         else
           error "Detected cycle '$file' -> '$import_file'"
