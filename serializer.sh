@@ -378,7 +378,7 @@ function decode_file() {
 
       if [[ -v merged_files[$import_file] ]]; then
         if [[ -n "${merged_files[$import_file]}" ]]; then
-          ansi_span "$prefix$connector" "\033[0;33mFile↻:" " $import_file \n" >&2
+          ansi_span "$prefix$connector" "\033[0;33m↻File:" " $import_file \n" >&2
           merged_import_files+=("${merged_files[$import_file]}")
         else
           error "Detected cycle '$file' -> '$import_file'"
