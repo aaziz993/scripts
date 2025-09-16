@@ -213,8 +213,8 @@ function substitute() {
       function var() {
         local path=\"\$1\"
 
-        ! contains \"\$path\" <<<\"\$global_source\" && return \$NO_SUCH_ELEMENT
-        _substitutor \"\$path\" \"\$global_source\"
+        ! contains \"\$path\" <<<\"\$global_values\" && return \$NO_SUCH_ELEMENT
+        _substitutor \"\$path\" \"\$global_values\"
         local status=\$?
         ((status == 0)) && printf \"%s\" \"\$global_value\"
         return \$status
@@ -398,27 +398,3 @@ function decode_file() {
 
   printf "%s" "$merged"
 }
-
-
-v=$(cat<<EOF
-iac-vars:
-  v: 100
-  tld: org
-  storageClassName: longhorn-v2-data-engine
-# ---------------------------------------------------------------------------------------
-# Exports -- expose configuration values to particular consumers
-# ---------------------------------------------------------------------------------------
-
-# Configuration nested under the "environmentVariables" key is used to export environment
-# variables when using \`esc open --format shell\`, \`esc run\`, or \`pulumi up/preview/refresh/destroy\`
-environmentVariables: {}
-# Configuration nested under the "pulumiConfig" key will be available to Pulumi stacks that
-# reference this Environment during \`pulumi up/preview/refresh/destroy\`
-pulumiConfig:
-  iac-vars:
-    tld: org
-    storageClassName: longhorn-v2-data-engine
-EOF
-)
-
-get values PulumiEsc.common-vars.yaml | substitute -ud false | substitute "$v"
