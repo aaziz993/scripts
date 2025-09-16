@@ -238,7 +238,7 @@ function substitute() {
       if is_str "$global_value"; then
         local substituted_value
         substituted_value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
-          -ud "$unescape_dollars" _getter _evaluator global_cache "$global_value")"
+          -ud "$unescape_dollars" _getter _evaluator global_cache <<<"$global_value")"
 
         local status=$?
         ((status == 0)) && global_value="$substituted_value"

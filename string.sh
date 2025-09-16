@@ -147,7 +147,7 @@ function substitute_string() {
 
   function _substitute_string() {
     local inner_source
-    inner_source="$(src "${1:-}")"
+    inner_source="$1"
     local output=""
     local index=0
 
@@ -212,7 +212,7 @@ function substitute_string() {
 
             local status=$?
             if ((status == DEEP_RESOLVE)); then
-              value="$(_substitute_string <<<"$value")"
+              value="$(_substitute_string "$value")"
               cache[$path_plain]="$value"
             elif ((status != 0)); then
               printf "%s" "$inner_source"
@@ -267,7 +267,7 @@ function substitute_string() {
 
               local status=$?
               if ((status == DEEP_RESOLVE)); then
-                value="$(_substitute_string <<<"$value")"
+                value="$(_substitute_string "$value")"
                 cache[$path_plain]="$value"
               elif ((status != 0)); then
                 return $status
@@ -319,7 +319,7 @@ function substitute_string() {
     printf "%s" "$output"
   }
 
-  _substitute_string <<<"$source"
+  _substitute_string "$source"
 }
 
 function evaluate_string_parser() {
