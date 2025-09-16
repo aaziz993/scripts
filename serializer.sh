@@ -205,15 +205,16 @@ function substitute() {
 
   function _evaluator() {
     local value="$1"
-    echo "Script:$value" >&2
+
     bash -c "
       set -euo pipefail
       set -o errtrace
       $(declare -f)
-      $(declare -p SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN NO_SUCH_ELEMENT DEEP_RESOLVE)
+      $(declare -p ANSI_RESET SINGLE_QUOTED_STRING_PATTERN DOUBLE_QUOTED_STRING_PATTERN EVEN_DOLLARS_PATTERN INTERPOLATE_KEY INTERPOLATE_START_PATTERN INTERPOLATE_BRACED_START_PATTERN EVALUATE_START_PATTERN SUBSTITUTE_OTHER_PATTERN EVALUATE_OTHER_PATTERN NO_SUCH_ELEMENT DEEP_RESOLVE)
       $(declare -p interpolate interpolate_braced evaluate unescape_dollars global_source global_values global_cache global_value)
       function var() {
         local path=\"\$1\"
+
         ! contains \"\$path\" <<<\"\$global_source\" && return \$NO_SUCH_ELEMENT
         __substitute_string \"\$path\" \"\$global_source\"
         local status=\$?
