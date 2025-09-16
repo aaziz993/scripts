@@ -376,12 +376,7 @@ function evaluate_string_parser() {
     fi
 
     # Opening brace
-    if [[ "${source:index:1}" == "<" ]]; then
-      ((index += 1))
-
-      error "Extra < at '$index' in $source"
-      continue
-    fi
+    [[ "${source:index:1}" == "<" ]] && error "Extra < at '$index' in $source"
 
     # Closing brace
     if [[ "${source:index:1}" == ">" ]]; then
