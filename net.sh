@@ -71,5 +71,3 @@ function hosts_set() {
     }
   done
 }
-
-get_ip
