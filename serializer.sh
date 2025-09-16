@@ -413,7 +413,7 @@ values:
   nested: ${values.greet}, World!
   j: ${values.some}
   some:
-    structure: vAL ${greet}
+    structure: vAL $test
   str: >
     Something ${values.nested} $<echo $((98+546))> $<var values.j> Other
   str2: |
