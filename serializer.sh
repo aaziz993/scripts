@@ -218,6 +218,7 @@ function substitute() {
         _substitute_string0 \"\$path\" \"\$global_source\"
         local status=\$?
         ((status == 0 || status==\$UNRESOLVED)) && printf \"%s\" \"\$global_value\"
+        echo \"p:\$path->\$status\">&2
         return \$status
       }
       $value
@@ -377,7 +378,7 @@ function decode_file() {
 
       if [[ -v merged_files[$import_file] ]]; then
         if [[ -n "${merged_files[$import_file]}" ]]; then
-          ansi_span "$prefix$connector" "\033[0;33mFile:" " $import_file ↻\n" >&2
+          ansi_span "$prefix$connector" "\033[0;33mFile↻:" " $import_file \n" >&2
           merged_import_files+=("${merged_files[$import_file]}")
         else
           error "Detected cycle '$file' -> '$import_file'"
