@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/ansi.sh"
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/datetime.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/time.sh"
 
 VERBOSE="${VERBOSE:-1}"
 COLOR="${COLOR:-1}"
