@@ -227,12 +227,12 @@ function substitute() {
     local path="$1"
     local source="$2"
 
-    if [[ -v global_cache["$path"] ]]; then
-      global_value="${global_cache["$path"]}"
-    else
-      global_value="$(get "$path" <<<"$source")"
+    global_value="$(get "$path" <<<"$source")"
 
-      if is_str "$global_value"; then
+    if is_str "$global_value"; then
+      if [[ -v global_cache["$path"] ]]; then
+        global_value="${global_cache["$path"]}"
+      else
         global_value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
           -ud "$unescape_dollars" deep_getter inner_evaluator global_cache <<<"$global_value")"
 
