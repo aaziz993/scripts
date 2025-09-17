@@ -100,7 +100,9 @@ EVEN_DOLLARS_PATTERN='(?:\$\$)+'
 INTERPOLATE_KEY='\s*(?|((?:'"$ID_PATTERN"'|[-\d])+)|\[(\d+)\]|"('"$DOUBLE_QUOTED_STRING_PLAIN_PATTERN"')")\s*'
 INTERPOLATE_START_PATTERN='\$'
 INTERPOLATE_BRACED_START_PATTERN='\$\{'
-EVALUATE_START_PATTERN='\$\<'
+EVALUATE_OPEN_TOKEN="<"
+EVALUATE_CLOSE_TOKEN=">"
+EVALUATE_START_PATTERN='\$'"$EVALUATE_OPEN_TOKEN"
 SUBSTITUTE_OTHER_PATTERN='[^$]+'
 EVALUATE_OTHER_PATTERN='[^"<>]+'
 
@@ -346,7 +348,7 @@ function evaluate_string_parser() {
   local output=""
   local index=1
 
-  [[ "${source:0:1}" != "<" ]] && error "Missing < at '0' in '$source'"
+  [[ "${source:0:1}" != "$EVALUATE_OPEN_TOKEN" ]] && error "Missing $EVALUATE_OPEN_TOKEN at '0' in '$source'"
 
   while ((index < ${#source})); do
     local groups=()
@@ -375,12 +377,10 @@ function evaluate_string_parser() {
     fi
 
     # Opening brace
-    [[ "${source:index:1}" == "<" ]] && error "Extra < at '$index' in '$source'"
+    [[ "${source:index:1}" == "$EVALUATE_OPEN_TOKEN" ]] && error "Extra $EVALUATE_OPEN_TOKEN at '$index' in '$source'"
 
     # Closing brace
-    if [[ "${source:index:1}" == ">" ]]; then
-      ((index += 1))
-
+    if [[ "${source:index:1}" == "$EVALUATE_CLOSE_TOKEN" ]]; then
       printf "%s" "$output"
       return
     fi
@@ -399,5 +399,5 @@ function evaluate_string_parser() {
     ((index += 1))
   done
 
-  error "Missing > at '${#source}' in '$source'"
+  error "Missing $EVALUATE_CLOSE_TOKEN at '${#source}' in '$source'"
 }
