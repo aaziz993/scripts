@@ -214,7 +214,8 @@ function substitute() {
         local path=\"\$1\"
 
         ! contains \"\$path\" <<<\"\$global_values\" && return \$NO_SUCH_ELEMENT
-        inner_substitutor \"\$path\" \"\$global_values\"
+        global_value=\"\$(get \"\$path\" <<<\"\$global_values\")\"
+        inner_substitute_string \"\$path\" \"\$global_values\"
         local status=\$?
         ((status == 0)) && printf \"%s\" \"\$global_value\"
         return \$status
@@ -223,11 +224,8 @@ function substitute() {
     "
   }
 
-  function inner_substitutor() {
+  function inner_substitute_string() {
     local path="$1"
-    local source="$2"
-
-    global_value="$(get "$path" <<<"$source")"
 
     if is_str "$global_value"; then
       if [[ -v global_cache["$path"] ]]; then
@@ -249,7 +247,9 @@ function substitute() {
     local source="$1"
 
     while IFS= read -r path; do
-      inner_substitutor "$path" "$source"
+      global_value="$(get "$path" <<<"$source")"
+
+      inner_substitute_string "$path"
 
       local status=$?
       ((status != 0 && status != NO_SUCH_ELEMENT)) && error "Unresolved '$path'" $status
