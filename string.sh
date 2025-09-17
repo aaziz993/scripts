@@ -219,7 +219,7 @@ function substitute_string() {
               value="${inner_source:offset:index-offset}"
               return_status=$status
             elif ((status == DEEP_RESOLVE)); then
-              value="$(_substitute_string "$value")"
+              value="$(deep_substitute_string "$value")"
             elif ((status != 0)); then
               error "Interpolate braced '$path_plain' at '$offset' in '$inner_source'" $status
             fi
@@ -277,7 +277,7 @@ function substitute_string() {
                 value="${inner_source:offset:index-offset}"
                 return_status=$status
               elif ((status == DEEP_RESOLVE)); then
-                value="$(_substitute_string "$value")"
+                value="$(deep_substitute_string "$value")"
               elif ((status != 0)); then
                 error "Interpolate '$path_plain' at '$offset' in '$inner_source'" $status
               fi

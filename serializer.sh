@@ -199,7 +199,7 @@ function substitute() {
       printf "%s" "$value"
       return $DEEP_RESOLVE
     else
-      _substitute "$value"
+      deep_substitute "$value"
     fi
   }
 
