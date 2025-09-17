@@ -146,7 +146,7 @@ function substitute_string() {
   local source
   source="$(src "${4:-}")"
 
-  function _substitute_string() {
+  function deep_substitute_string() {
     local inner_source
     inner_source="$1"
     local output=""
@@ -339,7 +339,7 @@ function substitute_string() {
     return $return_status
   }
 
-  _substitute_string "$source"
+  deep_substitute_string "$source"
 }
 
 function evaluate_string_parser() {

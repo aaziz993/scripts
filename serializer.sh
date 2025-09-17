@@ -184,7 +184,7 @@ function substitute() {
   local -A global_cache=()
   local global_value
 
-  function _getter() {
+  function deep_getter() {
     local -n keys="$1"
     local path
     local value
@@ -203,7 +203,7 @@ function substitute() {
     fi
   }
 
-  function _evaluator() {
+  function inner_evaluator() {
     local value="$1"
 
     bash_c "
@@ -214,7 +214,7 @@ function substitute() {
         local path=\"\$1\"
 
         ! contains \"\$path\" <<<\"\$global_values\" && return \$NO_SUCH_ELEMENT
-        _substitutor \"\$path\" \"\$global_values\"
+        inner_substitutor \"\$path\" \"\$global_values\"
         local status=\$?
         ((status == 0)) && printf \"%s\" \"\$global_value\"
         return \$status
@@ -223,7 +223,7 @@ function substitute() {
     "
   }
 
-  function _substitutor() {
+  function inner_substitutor() {
     local path="$1"
     local source="$2"
 
@@ -234,7 +234,7 @@ function substitute() {
 
       if is_str "$global_value"; then
         global_value="$(substitute_string -i "$interpolate" -ib "$interpolate_braced" -e "$evaluate" \
-          -ud "$unescape_dollars" _getter _evaluator global_cache <<<"$global_value")"
+          -ud "$unescape_dollars" deep_getter inner_evaluator global_cache <<<"$global_value")"
 
         local status=$?
 
@@ -245,11 +245,11 @@ function substitute() {
     fi
   }
 
-  function _substitute() {
+  function deep_substitute() {
     local source="$1"
 
     while IFS= read -r path; do
-      _substitutor "$path" "$source"
+      inner_substitutor "$path" "$source"
 
       local status=$?
       ((status != 0 && status != NO_SUCH_ELEMENT)) && error "Unresolved '$path'" $status
@@ -260,7 +260,7 @@ function substitute() {
     printf "%s" "$source"
   }
 
-  _substitute "$global_source"
+  deep_substitute "$global_source"
 }
 
 function assign_in_file() {
@@ -351,7 +351,7 @@ function decode_file() {
 
   ansi_span "\033[0;32mFile:" " $file \n" >&2
 
-  _decode_file() {
+  deep_decode_file() {
     local file="$1"
     local prefix="$2"
     local decoded_file
@@ -385,7 +385,7 @@ function decode_file() {
         local next_prefix="$prefix"
         [[ $is_last -eq 1 ]] && next_prefix+="   " || next_prefix+="│  "
 
-        _decode_file "$import_file" "$next_prefix"
+        deep_decode_file "$import_file" "$next_prefix"
         merged_import_files+=("$merged")
       fi
     done
@@ -394,7 +394,7 @@ function decode_file() {
     merged_files["$file"]="$merged"
   }
 
-  _decode_file "$file" ""
+  deep_decode_file "$file" ""
 
   printf "%s" "$merged"
 }
